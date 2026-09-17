@@ -1,0 +1,59 @@
+name: Deploy Web Client to GitHub Pages
+
+# Publishes the playable web build to GitHub Pages so the game can be
+# opened from a public URL. Runs on GitHub-hosted runners since this repo's
+# own dev sandbox has no way to expose a live preview URL itself.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Build web client
+        # Single-player/bot races work fully offline (Rapier physics WASM is
+        # inlined as base64). Online multiplayer needs a real server; this
+        # build keeps the default localhost:2567 target, which simply won't
+        # connect from a Pages-hosted page -- that's expected, not a bug.
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build:client
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/client/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
