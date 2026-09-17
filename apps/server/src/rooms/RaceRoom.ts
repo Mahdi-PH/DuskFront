@@ -275,7 +275,8 @@ export class RaceRoom extends Room<RaceRoomState> {
     const botNames = ['ZENITH', 'ROCKET', 'BLAZE', 'VORTEX', 'PIXEL', 'SHADOW', 'NOVA'];
     for (let i = 0; i < botCount; i++) {
       const sessionId = `bot-${i}-${Date.now()}`;
-      const vehicleId = ['toro', 'vortex', 'wave', 'fang', 'titan', 'spark', 'mirage', 'comet'][i % 8]!;
+      const botVehiclePool = ['toro', 'vortex', 'wave', 'fang', 'titan', 'spark', 'mirage', 'comet', 'zephyr', 'shadow'];
+      const vehicleId = botVehiclePool[i % botVehiclePool.length]!;
       const bot = new PlayerState();
       bot.sessionId = sessionId;
       bot.isBot = true;

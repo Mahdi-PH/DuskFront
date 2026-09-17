@@ -9,7 +9,7 @@
     { "id": "island-champion", "nameKey": "achievement.islandChampion", "descKey": "achievement.islandChampion.desc", "target": 6, "metric": "distinctTracksWon", "rewardCoins": 500 },
     { "id": "first-victory", "nameKey": "achievement.firstVictory", "descKey": "achievement.firstVictory.desc", "target": 1, "metric": "racesWon", "rewardCoins": 100 },
     { "id": "veteran-racer", "nameKey": "achievement.veteranRacer", "descKey": "achievement.veteranRacer.desc", "target": 100, "metric": "racesCompleted", "rewardCoins": 400 },
-    { "id": "garage-collector", "nameKey": "achievement.garageCollector", "descKey": "achievement.garageCollector.desc", "target": 8, "metric": "vehiclesUnlocked", "rewardCoins": 350 },
+    { "id": "garage-collector", "nameKey": "achievement.garageCollector", "descKey": "achievement.garageCollector.desc", "target": 10, "metric": "vehiclesUnlocked", "rewardCoins": 350 },
     { "id": "level-10", "nameKey": "achievement.level10", "descKey": "achievement.level10.desc", "target": 10, "metric": "playerLevel", "rewardCoins": 150 },
     { "id": "level-25", "nameKey": "achievement.level25", "descKey": "achievement.level25.desc", "target": 25, "metric": "playerLevel", "rewardCoins": 300 },
     { "id": "level-50", "nameKey": "achievement.level50", "descKey": "achievement.level50.desc", "target": 50, "metric": "playerLevel", "rewardCoins": 700 },

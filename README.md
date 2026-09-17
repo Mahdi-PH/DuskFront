@@ -1,7 +1,7 @@
 # VELOCITY ISLAND (جزيرة السرعة)
 
 A 3D arcade kart racer with an original "Tropical Future Arcade" identity —
-8 vehicles, 6 tracks, 9 power-ups, AI bots, and authoritative online
+10 vehicles, 6 tracks, 9 power-ups, AI bots, and authoritative online
 multiplayer. Arabic-first (RTL) with full English support.
 
 Everything is procedurally generated at runtime: vehicle models, tracks,

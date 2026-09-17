@@ -264,7 +264,9 @@ export class Game {
   }
 
   private pickBotVehicleId(excludeId: string, seed: number): string {
-    const pool = ['toro', 'vortex', 'wave', 'fang', 'titan', 'spark', 'mirage', 'comet'].filter((id) => id !== excludeId);
+    const pool = ['toro', 'vortex', 'wave', 'fang', 'titan', 'spark', 'mirage', 'comet', 'zephyr', 'shadow'].filter(
+      (id) => id !== excludeId,
+    );
     return pool[seed % pool.length]!;
   }
 

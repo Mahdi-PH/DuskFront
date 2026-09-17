@@ -224,6 +224,62 @@
       },
       "stats": { "speed": 92, "acceleration": 94, "handling": 62, "drift": 74, "boost": 88, "durability": 34 },
       "colorways": ["sunset-comet", "coral-blaze", "deep-navy"]
+    },
+    {
+      "id": "zephyr",
+      "name": "ZEPHYR",
+      "tagline": "Featherweight, razor-sharp",
+      "silhouette": "aero-glider",
+      "unlock": { "type": "level", "level": 14 },
+      "physics": {
+        "mass": 860,
+        "topSpeed": 58,
+        "reverseSpeed": 18,
+        "acceleration": 15.5,
+        "braking": 20,
+        "steerAngleDeg": 42,
+        "steerSpeedFactor": 0.85,
+        "gripBase": 0.82,
+        "driftGripFactor": 0.6,
+        "driftTriggerAngleDeg": 7,
+        "suspensionStiffness": 50,
+        "suspensionDamping": 4.0,
+        "suspensionRestLength": 0.28,
+        "airControl": 0.7,
+        "collisionResistance": 0.5,
+        "boostForce": 30,
+        "boostDuration": 1.5
+      },
+      "stats": { "speed": 80, "acceleration": 84, "handling": 90, "drift": 56, "boost": 66, "durability": 38 },
+      "colorways": ["turquoise-gust", "tropical-green", "warm-white"]
+    },
+    {
+      "id": "shadow",
+      "name": "SHADOW",
+      "tagline": "Hunts fastest after dark",
+      "silhouette": "predator-wing",
+      "unlock": { "type": "level", "level": 20 },
+      "physics": {
+        "mass": 910,
+        "topSpeed": 64,
+        "reverseSpeed": 19,
+        "acceleration": 16.5,
+        "braking": 18,
+        "steerAngleDeg": 37,
+        "steerSpeedFactor": 0.83,
+        "gripBase": 0.71,
+        "driftGripFactor": 0.72,
+        "driftTriggerAngleDeg": 6,
+        "suspensionStiffness": 47,
+        "suspensionDamping": 3.9,
+        "suspensionRestLength": 0.29,
+        "airControl": 0.58,
+        "collisionResistance": 0.52,
+        "boostForce": 44,
+        "boostDuration": 1.8
+      },
+      "stats": { "speed": 96, "acceleration": 90, "handling": 58, "drift": 80, "boost": 94, "durability": 36 },
+      "colorways": ["deep-navy", "coral-strike", "sunset-orange"]
     }
   ]
 }

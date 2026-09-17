@@ -26,6 +26,8 @@ const DIMENSIONS: Record<string, VehicleDimensions> = {
   spark: { halfWidth: 0.88, halfHeight: 0.3, halfLength: 1.82, wheelRadius: 0.34, wheelWidth: 0.27, wheelBaseHalf: 1.3, trackHalf: 0.84, rideHeight: 0.25, cabinHeightScale: 0.85, spoilerScale: 1.1 },
   mirage: { halfWidth: 0.84, halfHeight: 0.28, halfLength: 1.9, wheelRadius: 0.33, wheelWidth: 0.25, wheelBaseHalf: 1.4, trackHalf: 0.8, rideHeight: 0.22, cabinHeightScale: 0.7, spoilerScale: 0.9 },
   comet: { halfWidth: 0.87, halfHeight: 0.29, halfLength: 1.88, wheelRadius: 0.34, wheelWidth: 0.27, wheelBaseHalf: 1.38, trackHalf: 0.83, rideHeight: 0.23, cabinHeightScale: 0.78, spoilerScale: 1.4 },
+  zephyr: { halfWidth: 0.82, halfHeight: 0.27, halfLength: 1.83, wheelRadius: 0.32, wheelWidth: 0.24, wheelBaseHalf: 1.32, trackHalf: 0.78, rideHeight: 0.21, cabinHeightScale: 0.68, spoilerScale: 0.85 },
+  shadow: { halfWidth: 0.89, halfHeight: 0.29, halfLength: 1.92, wheelRadius: 0.35, wheelWidth: 0.28, wheelBaseHalf: 1.42, trackHalf: 0.85, rideHeight: 0.23, cabinHeightScale: 0.76, spoilerScale: 1.5 },
 };
 
 const DEFAULT_DIMENSIONS: VehicleDimensions = DIMENSIONS.wave!;
