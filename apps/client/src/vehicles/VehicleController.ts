@@ -50,6 +50,11 @@ export interface VehicleRuntimeState {
   flippedTimeSec: number;
   wheels: WheelVisualState[];
   lastImpactStrength: number;
+  stunnedSec: number;
+  stunSpeedPenalty: number;
+  shieldSec: number;
+  phantomSec: number;
+  boostDisabledSec: number;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -114,6 +119,11 @@ export class VehicleController {
         localAnchor: new THREE.Vector3(a.x, a.y, a.z),
       })),
       lastImpactStrength: 0,
+      stunnedSec: 0,
+      stunSpeedPenalty: 0,
+      shieldSec: 0,
+      phantomSec: 0,
+      boostDisabledSec: 0,
     };
   }
 
@@ -121,8 +131,53 @@ export class VehicleController {
     this.input = input;
   }
 
+  get isShielded(): boolean {
+    return this.state.shieldSec > 0;
+  }
+
+  get isPhantom(): boolean {
+    return this.state.phantomSec > 0;
+  }
+
+  /** Applies a negative weapon effect (stun + speed penalty). Blocked entirely while shielded. */
+  applyStun(stunSec: number, speedPenalty: number): void {
+    if (this.isShielded) return;
+    this.state.stunnedSec = Math.max(this.state.stunnedSec, stunSec);
+    this.state.stunSpeedPenalty = Math.max(this.state.stunSpeedPenalty, speedPenalty);
+  }
+
+  applyShield(durationSec: number): void {
+    this.state.shieldSec = Math.max(this.state.shieldSec, durationSec);
+  }
+
+  applyPhantom(durationSec: number): void {
+    this.state.phantomSec = Math.max(this.state.phantomSec, durationSec);
+  }
+
+  applyBoostDisable(durationSec: number): void {
+    if (this.isShielded) return;
+    this.state.boostDisabledSec = Math.max(this.state.boostDisabledSec, durationSec);
+  }
+
+  /** Instantly grants a burst of boost, bypassing the normal drift-charge requirement
+   * (used by the TURBO power-up). */
+  activateInstantBoost(multiplier: number, durationSec: number): void {
+    this.state.isBoosting = true;
+    this.state.boostTimeRemainingSec = Math.max(this.state.boostTimeRemainingSec, durationSec);
+    this.instantBoostMultiplier = multiplier;
+  }
+
+  private instantBoostMultiplier = 1;
+
   /** Called once per fixed physics substep (see PhysicsWorld.step's onSubstep). */
   applyForces(stepSec: number): void {
+    // Rapier's addForce/addForceAtPoint/addTorque accumulate into a persistent
+    // per-body force buffer rather than being consumed automatically each step, so
+    // last frame's forces must be cleared before applying this frame's — otherwise
+    // every subsequent frame stacks on top of all previous ones (runaway energy).
+    this.body.resetForces(true);
+    this.body.resetTorques(true);
+
     const physics = this.definition.physics;
     const rotation = this.body.rotation();
     const quat = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
@@ -166,9 +221,12 @@ export class VehicleController {
         const pointVelocity = this.pointVelocity(contactPoint);
         const compressionVel = -pointVelocity.dot(bodyUp);
 
-        const springForce = physics.suspensionStiffness * compression * physics.mass * 0.1;
-        const dampingForce = physics.suspensionDamping * compressionVel * physics.mass * 0.05;
-        const suspensionForce = Math.max(0, springForce - dampingForce);
+        // Damping must ADD to the spring force while compressing (resisting the fall) and
+        // SUBTRACT while extending (bleeding off rebound energy) — both terms push along
+        // +bodyUp, so they combine additively rather than opposing each other.
+        const springForce = physics.suspensionStiffness * compression * physics.mass * 0.2;
+        const dampingForce = physics.suspensionDamping * compressionVel * physics.mass * 0.18;
+        const suspensionForce = Math.max(0, springForce + dampingForce);
         this.body.addForceAtPoint(
           { x: bodyUp.x * suspensionForce, y: bodyUp.y * suspensionForce, z: bodyUp.z * suspensionForce },
           contactPoint,
@@ -210,7 +268,9 @@ export class VehicleController {
 
     if (this.state.isGrounded) {
       // Engine / brake force applied at rear axle contact points (or body center if airborne rear wheels).
-      const engineForce = computeEngineForce(this.input.throttle, this.input.brake, forwardSpeed, physics);
+      const stunFactor = this.state.stunnedSec > 0 ? 1 - this.state.stunSpeedPenalty : 1;
+      const engineForce =
+        computeEngineForce(this.input.throttle, this.input.brake, forwardSpeed, physics) * stunFactor;
       const contacts = rearContacts.length > 0 ? rearContacts : [bodyPos];
       const perContact = engineForce / contacts.length;
       for (const contact of contacts) {
@@ -268,19 +328,30 @@ export class VehicleController {
     }
 
     // Boost force application.
-    if (this.input.boost && this.state.boostCharge > 0 && !this.state.isBoosting) {
+    if (this.input.boost && this.state.boostCharge > 0 && !this.state.isBoosting && this.state.boostDisabledSec <= 0) {
       this.state.isBoosting = true;
       this.state.boostTimeRemainingSec = physics.boostDuration * lerp(0.4, 1, this.state.boostCharge);
       this.state.boostCharge = 0;
+      this.instantBoostMultiplier = 1;
     }
     if (this.state.isBoosting) {
-      const boostAccel = computeBoostAcceleration(physics);
+      const boostAccel = computeBoostAcceleration(physics, this.instantBoostMultiplier);
       this.body.addForce({ x: forward.x * boostAccel * physics.mass, y: 0, z: forward.z * boostAccel * physics.mass }, true);
       this.state.boostTimeRemainingSec -= stepSec;
       if (this.state.boostTimeRemainingSec <= 0) {
         this.state.isBoosting = false;
+        this.instantBoostMultiplier = 1;
       }
     }
+
+    // Status effect timers.
+    if (this.state.stunnedSec > 0) {
+      this.state.stunnedSec = Math.max(0, this.state.stunnedSec - stepSec);
+      if (this.state.stunnedSec === 0) this.state.stunSpeedPenalty = 0;
+    }
+    if (this.state.shieldSec > 0) this.state.shieldSec = Math.max(0, this.state.shieldSec - stepSec);
+    if (this.state.phantomSec > 0) this.state.phantomSec = Math.max(0, this.state.phantomSec - stepSec);
+    if (this.state.boostDisabledSec > 0) this.state.boostDisabledSec = Math.max(0, this.state.boostDisabledSec - stepSec);
 
     // Flip detection.
     const upDot = bodyUp.dot(UP);
@@ -298,7 +369,7 @@ export class VehicleController {
 
   /** Called by the collision system when this vehicle takes a meaningful hit. */
   registerImpact(impulseMagnitude: number): number {
-    if (this.lastImpactCooldown > 0) return 0;
+    if (this.lastImpactCooldown > 0 || this.isPhantom) return 0;
     const factor = computeCollisionImpulseFactor(this.definition.physics);
     const effective = impulseMagnitude * factor;
     this.state.lastImpactStrength = effective;
@@ -317,6 +388,8 @@ export class VehicleController {
     this.state.isBoosting = false;
     this.state.flippedTimeSec = 0;
     this.state.airborneTimeSec = 0;
+    this.state.stunnedSec = 0;
+    this.state.stunSpeedPenalty = 0;
   }
 
   getWorldPosition(): THREE.Vector3 {

@@ -250,7 +250,8 @@ export function buildTrack(def: TrackRuntimeDefinition, physicsWorld: PhysicsWor
     const pos = startFrame.position
       .clone()
       .addScaledVector(startFrame.tangent, -backOffset)
-      .addScaledVector(startFrame.right, sideOffset);
+      .addScaledVector(startFrame.right, sideOffset)
+      .add(new THREE.Vector3(0, 0.5, 0));
     return { position: pos, yawRad: startYaw };
   });
 

@@ -46,7 +46,7 @@ export class RaceManager {
 
   constructor(
     private readonly track: BuiltTrack,
-    private readonly totalLaps: number,
+    readonly totalLaps: number,
     private readonly events: EventBus<GameEventMap>,
   ) {}
 
@@ -235,7 +235,7 @@ export class RaceManager {
     const checkpointIndex = (racer.nextCheckpointIndex - 1 + this.track.checkpoints.length) % this.track.checkpoints.length;
     const checkpoint = this.track.checkpoints[checkpointIndex]!;
     const yaw = Math.atan2(checkpoint.forward.x, checkpoint.forward.z);
-    racer.controller.teleportTo(checkpoint.position.clone().add(new THREE.Vector3(0, 1, 0)), yaw);
+    racer.controller.teleportTo(checkpoint.position.clone().add(new THREE.Vector3(0, 0.5, 0)), yaw);
     racer.offTrackSec = 0;
     racer.stuckSec = 0;
     racer.invulnerableSec = RACE_BALANCE.respawn.invulnerabilitySec;

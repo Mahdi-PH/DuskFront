@@ -1,0 +1,319 @@
+.vi-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--font-display);
+  user-select: none;
+  z-index: 20;
+}
+
+.vi-hud [dir] {
+  unicode-bidi: isolate;
+}
+
+/* ---- Standings (top-left) ---- */
+.vi-hud-standings {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 220px;
+  padding: 12px 14px;
+  direction: ltr;
+}
+.vi-hud-standings__rank {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.vi-hud-standings__rank-value {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--color-turquoise);
+  line-height: 1;
+}
+.vi-hud-standings__rank-label {
+  font-size: 11px;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.vi-hud-standings__list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow: hidden;
+}
+.vi-hud-standings__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  opacity: 0.75;
+}
+.vi-hud-standings__row--self {
+  background: rgba(47, 217, 201, 0.18);
+  opacity: 1;
+  font-weight: 700;
+}
+.vi-hud-standings__row-num {
+  width: 14px;
+  text-align: center;
+  opacity: 0.6;
+}
+.vi-hud-standings__row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.vi-hud-standings__row-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Lap / timer (top-center) ---- */
+.vi-hud-lapinfo {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 22px;
+  direction: ltr;
+}
+.vi-hud-lapinfo__block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+}
+.vi-hud-lapinfo__value {
+  font-size: 20px;
+  font-weight: 800;
+}
+.vi-hud-lapinfo__label {
+  font-size: 9px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.vi-hud-lapinfo__divider {
+  width: 1px;
+  height: 26px;
+  background: rgba(250, 246, 238, 0.2);
+}
+
+/* ---- Minimap (top-right) ---- */
+.vi-hud-minimap {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 8px;
+}
+.vi-minimap-canvas {
+  display: block;
+  border-radius: 12px;
+}
+
+/* ---- Power-up stack (right-middle) ---- */
+.vi-hud-powerup {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.vi-hud-powerup__slot {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 900;
+  border: 2px solid rgba(250, 246, 238, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.vi-hud-powerup__slot--filled {
+  border-color: var(--color-turquoise);
+  box-shadow: 0 0 18px rgba(47, 217, 201, 0.5);
+  animation: vi-powerup-pulse 1.4s ease-in-out infinite;
+}
+@keyframes vi-powerup-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* ---- Speedometer (bottom-left) ---- */
+.vi-hud-speed {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  direction: ltr;
+}
+.vi-hud-speed__gauge {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+.vi-hud-speed__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.vi-hud-speed__number {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+.vi-hud-speed__unit {
+  font-size: 10px;
+  opacity: 0.7;
+  letter-spacing: 0.1em;
+}
+.vi-hud-boost {
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.vi-hud-boost__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-sunset-orange);
+}
+.vi-hud-boost__bar {
+  height: 8px;
+  border-radius: 6px;
+  background: rgba(250, 246, 238, 0.12);
+  overflow: hidden;
+}
+.vi-hud-boost__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-turquoise), var(--color-sunset-orange));
+  transition: width 0.08s linear;
+}
+.vi-hud-boost__fill--drift-1 { background: linear-gradient(90deg, #faf6ee, #2fd9c9); }
+.vi-hud-boost__fill--drift-2 { background: linear-gradient(90deg, #2fd9c9, #ff7a3d); }
+.vi-hud-boost__fill--drift-3 { background: linear-gradient(90deg, #ff7a3d, #ff5c6c); }
+
+/* ---- Control legend (bottom-right, desktop only) ---- */
+.vi-hud-controls {
+  position: absolute;
+  bottom: 22px;
+  right: 24px;
+  display: flex;
+  gap: 14px;
+  direction: ltr;
+}
+.vi-hud-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+}
+.vi-hud-control__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 2px solid rgba(250, 246, 238, 0.25);
+}
+.vi-hud-control__key {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+@media (max-width: 899px), (pointer: coarse) {
+  .vi-hud-controls {
+    display: none;
+  }
+}
+
+/* ---- Countdown ---- */
+.vi-hud-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.vi-hud-countdown__value {
+  font-size: 140px;
+  font-weight: 900;
+  color: var(--color-warm-white);
+  text-shadow: 0 0 40px rgba(47, 217, 201, 0.8), 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: vi-countdown-pop 0.9s ease-out;
+}
+@keyframes vi-countdown-pop {
+  0% { transform: scale(1.6); opacity: 0; }
+  30% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---- Wrong-way banner ---- */
+.vi-hud-wrongway {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  background: rgba(255, 92, 108, 0.85);
+  border-radius: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  animation: vi-wrongway-blink 1s ease-in-out infinite;
+}
+@keyframes vi-wrongway-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ---- Network indicator ---- */
+.vi-hud-network {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  padding: 4px 10px;
+  opacity: 0.75;
+}
+.vi-hud-network__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
