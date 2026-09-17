@@ -48,6 +48,11 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          # Pages isn't enabled on this repo yet; without this the action
+          # only checks for an existing site and 404s. This creates it with
+          # the Actions build source on first run.
+          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
