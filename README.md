@@ -148,6 +148,49 @@ Edit the JSON, then rebuild the shared package (`npm run build:shared`) or
 just restart the dev servers — both `apps/client` and `apps/server` import
 these values through `@velocity-island/shared`.
 
+## Android APK
+
+The client is wrapped as a native Android app with
+[Capacitor](https://capacitorjs.com/) (`apps/client/android`) — the WebView
+loads the same Vite build used on the web, and Rapier's physics WASM is
+already inlined as base64 by `@dimforge/rapier3d-compat`, so no extra
+asset/MIME wiring is needed.
+
+Building the APK requires the Android SDK, which this project's own dev
+sandbox has no network access to fetch — so it's built by
+`.github/workflows/android-release.yml` on GitHub's runners instead:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Pushing a `v*.*.*` tag (or running the workflow manually from the Actions
+tab) builds a debug-signed APK and attaches it to a GitHub Release for that
+tag. Debug-signed means it installs with "unknown sources" enabled on any
+device, but isn't eligible for the Play Store — that needs your own release
+signing identity and Play Console access.
+
+The APK's web build points at `http://localhost:2567` by default (see
+**Multiplayer** above), which only resolves on the device itself, so:
+
+- Single-player / bot races work fully offline out of the box.
+- Online multiplayer needs a real, reachable server. Set
+  `VITE_SERVER_HTTP_URL` / `VITE_SERVER_WS_URL` to your deployed server
+  before building the client (`npm run build:client`) and syncing Capacitor
+  (`npx cap sync android` from `apps/client`) if you want online play baked
+  into the APK.
+
+To build locally instead of via CI, you need the Android SDK/build-tools
+installed and `ANDROID_HOME` set, then:
+
+```bash
+npm run build:shared && npm run build:client
+cd apps/client && npx cap sync android
+cd android && ./gradlew assembleDebug
+# apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
 ## Tests
 
 ```bash

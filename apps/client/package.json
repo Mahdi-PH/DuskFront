@@ -10,12 +10,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@dimforge/rapier3d-compat": "^0.14.0",
     "@velocity-island/shared": "*",
     "colyseus.js": "^0.16.9",
     "three": "^0.167.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@types/three": "^0.167.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
