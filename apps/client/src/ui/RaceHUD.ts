@@ -176,6 +176,11 @@ export class RaceHUD {
     valueOverlay.append(number, unit);
     gauge.appendChild(valueOverlay);
 
+    const gear = document.createElement('div');
+    gear.className = 'vi-hud-speed__gear';
+    gear.textContent = 'N';
+    gauge.appendChild(gear);
+
     const boost = document.createElement('div');
     boost.className = 'vi-hud-boost';
     const boostLabel = document.createElement('div');
@@ -190,6 +195,7 @@ export class RaceHUD {
 
     panel.append(gauge, boost);
     this.els.speedNumber = number;
+    this.els.gearValue = gear;
     this.els.boostFill = boostFill;
     this.els.boostPct = boostLabel.querySelector('.vi-hud-boost__pct')!;
     return { panel, needle };
@@ -258,6 +264,7 @@ export class RaceHUD {
     const speedRatio = Math.min(1, Math.max(0, data.speedKmh) / 220);
     const angle = -135 + speedRatio * 270;
     this.speedNeedle.setAttribute('transform', `rotate(${angle} 64 64)`);
+    this.els.gearValue!.textContent = data.speedKmh < 5 ? 'N' : String(Math.min(6, Math.ceil(speedRatio * 6) || 1));
 
     const boostPct = Math.round(data.boostCharge * 100);
     this.els.boostFill!.style.width = `${boostPct}%`;
