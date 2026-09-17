@@ -67,16 +67,24 @@
   z-index: 2;
   width: 100%;
   max-width: 880px;
+  max-height: calc(100vh - 48px);
   padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
 }
 
 .vi-panel-header {
+  position: sticky;
+  top: -28px;
+  margin: -28px -28px 0;
+  padding: 28px 28px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: linear-gradient(160deg, var(--glass-bg), rgba(12, 31, 61, 0.3));
+  z-index: 3;
 }
 
 .vi-panel-title {
