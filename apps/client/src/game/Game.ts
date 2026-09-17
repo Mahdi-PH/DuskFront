@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { AIDifficulty } from '@velocity-island/shared';
 import { getVehicleById, RACE_BALANCE, ECONOMY_BALANCE } from '@velocity-island/shared';
 import { SceneManager } from '../core/SceneManager';
@@ -14,7 +15,7 @@ import { buildTrack, type BuiltTrack } from '../tracks/TrackBuilder';
 import { RaceManager, type RacerRuntime } from './RaceManager';
 import { PowerUpSystem } from '../powerups/PowerUpSystem';
 import { AIController } from '../ai/AIController';
-import { InputManager } from '../input/InputManager';
+import { InputManager, type RaceControlInput } from '../input/InputManager';
 import { TouchControls } from '../input/TouchControls';
 import { RaceHUD } from '../ui/RaceHUD';
 import type { GameEventMap } from './GameEvents';
@@ -71,6 +72,7 @@ export class Game {
   private rafHandle: number | null = null;
   private lastUsePowerUpInput = false;
   private lastPauseInput = false;
+  private lastLocalInput: RaceControlInput | null = null;
   private displayNames = new Map<string, string>();
   private paused = false;
   private raceFinishReported = false;
@@ -98,7 +100,16 @@ export class Game {
     this.hud = new RaceHUD(uiContainer);
     this.audioDirector = new AudioDirector(this.events);
     this.applySettings(localProfileStore.get().settings);
+
+    // A backgrounded tab or an interrupted touch gesture must never leave throttle,
+    // steering, drift or boost stuck "on" once the player comes back.
+    window.addEventListener('blur', this.handleInputInterrupted);
+    document.addEventListener('visibilitychange', this.handleInputInterrupted);
   }
+
+  private handleInputInterrupted = (): void => {
+    this.touchControls.releaseAll();
+  };
 
   applySettings(settings: LocalSettings): void {
     this.inputManager.setAutoAccelerate(settings.autoAccelerate);
@@ -281,6 +292,7 @@ export class Game {
     }
     this.lastPauseInput = localInput.pause;
     if (this.paused) return;
+    this.lastLocalInput = localInput;
 
     const localRacer = this.raceManager.getRacer(this.localPlayerId);
     if (localRacer) localRacer.controller.setInput(localInput);
@@ -467,6 +479,24 @@ export class Game {
       minimapMarkers,
       wrongWay: localRacer.wrongWaySec > RACE_BALANCE.wrongWay.warnAfterSec,
     });
+
+    if (import.meta.env.DEV && this.lastLocalInput) {
+      const rot = localRacer.controller.body.rotation();
+      const vehicleYawDeg =
+        (new THREE.Euler().setFromQuaternion(new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w), 'YXZ').y * 180) / Math.PI;
+      const cameraYawDeg =
+        (new THREE.Euler().setFromQuaternion(this.sceneManager.chaseCamera.camera.quaternion, 'YXZ').y * 180) / Math.PI;
+      this.hud.updateDebug({
+        steering: this.lastLocalInput.steer,
+        throttle: this.lastLocalInput.throttle,
+        brake: this.lastLocalInput.brake,
+        drift: this.lastLocalInput.drift,
+        boost: this.lastLocalInput.boost,
+        vehicleYawDeg,
+        cameraYawDeg,
+        speedKmh: localRacer.controller.state.speedKmh,
+      });
+    }
   }
 
   private reportRaceResults(localRacer: RacerRuntime): void {
@@ -508,6 +538,8 @@ export class Game {
 
   dispose(): void {
     this.stop();
+    window.removeEventListener('blur', this.handleInputInterrupted);
+    document.removeEventListener('visibilitychange', this.handleInputInterrupted);
     this.unsubscribeNetworkCheckpoint?.();
     this.colyseusClient?.leave();
     for (const ghost of this.remoteGhosts.values()) ghost.removeFromScene(this.sceneManager.scene);

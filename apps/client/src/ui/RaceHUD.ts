@@ -71,6 +71,61 @@ export class RaceHUD {
     this.root.appendChild(speedPanel);
     this.speedNeedle = needle;
     this.root.appendChild(this.buildControlLegend());
+    this.root.appendChild(this.buildRotatePrompt());
+    if (import.meta.env.DEV) this.root.appendChild(this.buildDebugOverlay());
+  }
+
+  /** Dev-build-only input/physics readout (steering, throttle, brake, drift, boost,
+   * vehicle yaw, camera yaw) so control-direction regressions are visible at a glance
+   * instead of only showing up as a vague "steering feels wrong" bug report. */
+  private buildDebugOverlay(): HTMLDivElement {
+    const panel = document.createElement('div');
+    panel.className = 'vi-hud-debug vi-glass';
+    panel.textContent = 'DEBUG';
+    this.els.debugOverlay = panel;
+    return panel;
+  }
+
+  updateDebug(info: {
+    steering: number;
+    throttle: number;
+    brake: number;
+    drift: boolean;
+    boost: boolean;
+    vehicleYawDeg: number;
+    cameraYawDeg: number;
+    speedKmh: number;
+  }): void {
+    const panel = this.els.debugOverlay;
+    if (!panel) return;
+    panel.innerHTML = [
+      `STEERING: ${info.steering.toFixed(2)}`,
+      `THROTTLE: ${info.throttle.toFixed(2)}`,
+      `BRAKE: ${info.brake.toFixed(2)}`,
+      `DRIFT: ${info.drift}`,
+      `BOOST: ${info.boost}`,
+      `SPEED: ${info.speedKmh.toFixed(1)} km/h`,
+      `VEHICLE YAW: ${info.vehicleYawDeg.toFixed(1)}°`,
+      `CAMERA YAW: ${info.cameraYawDeg.toFixed(1)}°`,
+    ]
+      .map((line) => `<div>${line}</div>`)
+      .join('');
+  }
+
+  /** Pure-CSS orientation gate: shown only on touch devices held in portrait, and hides
+   * itself the instant the device is rotated to landscape (no dismiss button needed --
+   * the media query re-evaluates live, so there's nothing to get stuck open). */
+  private buildRotatePrompt(): HTMLDivElement {
+    const prompt = document.createElement('div');
+    prompt.className = 'vi-rotate-prompt';
+    const icon = document.createElement('div');
+    icon.className = 'vi-rotate-prompt__icon';
+    icon.textContent = '⟳';
+    const label = document.createElement('div');
+    label.className = 'vi-rotate-prompt__label';
+    label.textContent = t('hud.rotateDevice');
+    prompt.append(icon, label);
+    return prompt;
   }
 
   private buildStandingsPanel(): HTMLDivElement {

@@ -25,6 +25,10 @@ export class InputManager {
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('gamepadconnected', this.handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', this.handleGamepadDisconnected);
+    // A key held down when the window loses focus (alt-tab, app switch) never gets its
+    // keyup event, which would otherwise leave that input stuck "on" indefinitely.
+    window.addEventListener('blur', this.handleBlur);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   setAutoAccelerate(enabled: boolean): void {
@@ -51,6 +55,14 @@ export class InputManager {
 
   private handleGamepadConnected = (e: GamepadEvent): void => {
     this.gamepadIndex = e.gamepad.index;
+  };
+
+  private handleBlur = (): void => {
+    this.keys.clear();
+  };
+
+  private handleVisibilityChange = (): void => {
+    if (document.hidden) this.keys.clear();
   };
 
   private handleGamepadDisconnected = (e: GamepadEvent): void => {
@@ -90,7 +102,7 @@ export class InputManager {
       leftTrigger > 0.05 ||
       Math.abs(steer) > 0 ||
       (pad.buttons[0]?.pressed ?? false) ||
-      (pad.buttons[5]?.pressed ?? false) ||
+      (pad.buttons[1]?.pressed ?? false) ||
       (pad.buttons[2]?.pressed ?? false);
     if (anyActive) this.lastActiveSource = 'gamepad';
 
@@ -99,7 +111,7 @@ export class InputManager {
       brake: leftTrigger,
       steer,
       drift: pad.buttons[0]?.pressed ?? false, // A / Cross
-      boost: pad.buttons[5]?.pressed ?? false, // RB / R1
+      boost: pad.buttons[1]?.pressed ?? false, // B / Circle
       usePowerUp: pad.buttons[2]?.pressed ?? false, // X / Square
       pause: pad.buttons[9]?.pressed ?? false, // Start
     };
@@ -136,5 +148,7 @@ export class InputManager {
     window.removeEventListener('keyup', this.handleKeyUp);
     window.removeEventListener('gamepadconnected', this.handleGamepadConnected);
     window.removeEventListener('gamepaddisconnected', this.handleGamepadDisconnected);
+    window.removeEventListener('blur', this.handleBlur);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
   }
 }

@@ -332,3 +332,63 @@
   height: 7px;
   border-radius: 50%;
 }
+
+/* ---- Dev-only input/physics debug readout ---- */
+.vi-hud-debug {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--color-turquoise);
+  pointer-events: none;
+}
+
+/* ---- Rotate-to-landscape gate (touch devices only, reactive to real orientation) ---- */
+.vi-rotate-prompt {
+  display: none;
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  .vi-rotate-prompt {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: var(--color-deep-navy);
+    color: var(--color-warm-white);
+    text-align: center;
+    padding: 24px;
+  }
+}
+.vi-rotate-prompt__icon {
+  font-size: 56px;
+  color: var(--color-turquoise);
+  animation: vi-rotate-spin 1.8s ease-in-out infinite;
+}
+.vi-rotate-prompt__label {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  max-width: 260px;
+}
+@keyframes vi-rotate-spin {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vi-rotate-prompt__icon {
+    animation: none;
+  }
+}

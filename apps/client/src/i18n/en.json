@@ -34,6 +34,7 @@
   "hud.paused": "PAUSED",
   "hud.resume": "RESUME",
   "hud.quit": "QUIT TO MENU",
+  "hud.rotateDevice": "Rotate your device to landscape to race",
   "countdown.go": "GO!",
   "results.title": "RACE RESULTS",
   "results.position": "POSITION",

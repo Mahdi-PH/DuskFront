@@ -10,6 +10,20 @@ type TouchLayout = Record<string, TouchLayoutEntry>;
 
 const LAYOUT_STORAGE_KEY = 'vi-touch-layout-v1';
 
+/** Small ignored zone around center so tiny finger jitter doesn't register as steering,
+ * plus a response curve (exponent > 1) that makes the first part of the drag finer/more
+ * precise while still reaching full lock at the pad's edge. */
+const STEER_DEAD_ZONE = 0.08;
+const STEER_RESPONSE_CURVE = 1.6;
+
+function applySteeringCurve(raw: number): number {
+  const magnitude = Math.abs(raw);
+  if (magnitude <= STEER_DEAD_ZONE) return 0;
+  const eased = (magnitude - STEER_DEAD_ZONE) / (1 - STEER_DEAD_ZONE);
+  const curved = Math.pow(eased, STEER_RESPONSE_CURVE);
+  return Math.sign(raw) * Math.min(1, curved);
+}
+
 const DEFAULT_LAYOUT: TouchLayout = {
   joystick: { xPct: 14, yPct: 78, scale: 1 },
   accelerate: { xPct: 88, yPct: 82, scale: 1 },
@@ -48,6 +62,7 @@ export class TouchControls {
   private state: RaceControlInput = { throttle: 0, brake: 0, steer: 0, drift: false, boost: false, usePowerUp: false, pause: false };
   private joystickActive = false;
   private joystickTouchId: number | null = null;
+  private joystickKnob: HTMLDivElement | null = null;
   private onChange: ((state: RaceControlInput) => void) | null = null;
 
   private elements = new Map<string, HTMLDivElement>();
@@ -87,6 +102,20 @@ export class TouchControls {
     this.applyLayout();
   }
 
+  /** Forces every touch control back to neutral and clears visual "pressed" state --
+   * called on tab blur/visibility change so an interrupted gesture (app switch, OS
+   * gesture, orientation change) can never leave throttle/steer/drift/boost stuck on. */
+  releaseAll(): void {
+    this.joystickActive = false;
+    this.joystickTouchId = null;
+    if (this.joystickKnob) this.joystickKnob.style.transform = 'translate(0px, 0px)';
+    this.state = { throttle: 0, brake: 0, steer: 0, drift: false, boost: false, usePowerUp: false, pause: false };
+    for (const [key, el] of this.elements) {
+      if (key !== 'joystick') el.classList.remove('vi-touch-btn--active');
+    }
+    this.emit();
+  }
+
   private buildJoystick(): void {
     const base = document.createElement('div');
     base.className = 'vi-touch-joystick';
@@ -94,6 +123,7 @@ export class TouchControls {
     const knob = document.createElement('div');
     knob.className = 'vi-touch-joystick__knob';
     base.appendChild(knob);
+    this.joystickKnob = knob;
     this.root.appendChild(base);
     this.elements.set('joystick', base);
     this.makeDraggable(base, 'joystick');
@@ -117,7 +147,7 @@ export class TouchControls {
         dy = (dy / dist) * radius;
       }
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      this.state.steer = Math.max(-1, Math.min(1, dx / radius));
+      this.state.steer = applySteeringCurve(dx / radius);
       this.emit();
     };
     const handleEnd = () => {
@@ -140,11 +170,13 @@ export class TouchControls {
         if (touch.identifier === this.joystickTouchId) updateFromClient(touch.clientX, touch.clientY);
       }
     });
-    window.addEventListener('touchend', (e) => {
+    const releaseIfJoystickTouch = (e: TouchEvent) => {
       for (const touch of Array.from(e.changedTouches)) {
         if (touch.identifier === this.joystickTouchId) handleEnd();
       }
-    });
+    };
+    window.addEventListener('touchend', releaseIfJoystickTouch);
+    window.addEventListener('touchcancel', releaseIfJoystickTouch);
 
     // Mouse fallback for desktop testing with touch-emulation.
     base.addEventListener('mousedown', (e) => {
@@ -197,6 +229,13 @@ export class TouchControls {
       press(true);
     });
     el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      press(false);
+    });
+    // touchcancel fires when the OS interrupts the gesture (a swipe-to-go-back edge
+    // gesture, a notification pulldown, etc.) -- without this the button's input would
+    // stay stuck "on" since no touchend ever arrives.
+    el.addEventListener('touchcancel', (e) => {
       e.preventDefault();
       press(false);
     });
