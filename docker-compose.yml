@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-velocity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-velocity}
+      POSTGRES_DB: ${POSTGRES_DB:-velocity_island}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-velocity}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: build
+    command: sh -c "npx prisma migrate deploy --schema database/prisma/schema.prisma && npx tsx database/prisma/seed.ts"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://velocity:velocity@postgres:5432/velocity_island}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-2567}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://velocity:velocity@postgres:5432/velocity_island}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_change_me_please_32chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_please_32chars}
+      JWT_ACCESS_TTL_SEC: ${JWT_ACCESS_TTL_SEC:-900}
+      JWT_REFRESH_TTL_SEC: ${JWT_REFRESH_TTL_SEC:-2592000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - '2567:2567'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+      args:
+        VITE_SERVER_HTTP_URL: ${VITE_SERVER_HTTP_URL:-http://localhost:2567}
+        VITE_SERVER_WS_URL: ${VITE_SERVER_WS_URL:-ws://localhost:2567}
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      - server
+
+volumes:
+  postgres-data:

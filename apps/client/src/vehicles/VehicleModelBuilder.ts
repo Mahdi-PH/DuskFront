@@ -50,21 +50,62 @@ export interface VehicleModel {
   headlights: THREE.PointLight[];
 }
 
+/** Chunky off-road ATV tire: a faceted cylinder (visually ~10% larger than the physics
+ * radius so it reads as a knobby off-road tire) with a ring of small tread-block bumps
+ * around its circumference, plus a colored hub cap. Purely cosmetic — the physics wheel
+ * raycast still uses dims.wheelRadius exactly, so this never affects handling. */
 function buildWheel(dims: ReturnType<typeof getVehicleDimensions>, colorway: VehicleColorway): THREE.Group {
   const spinner = new THREE.Group();
-  const tireGeo = new THREE.CylinderGeometry(dims.wheelRadius, dims.wheelRadius, dims.wheelWidth, 16);
+  const visualRadius = dims.wheelRadius * 1.08;
+  const segments = 14;
+
+  const tireGeo = new THREE.CylinderGeometry(visualRadius, visualRadius, dims.wheelWidth, segments);
   tireGeo.rotateZ(Math.PI / 2);
-  const tireMat = new THREE.MeshStandardMaterial({ color: 0x14161a, roughness: 0.9, metalness: 0.1 });
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.95, metalness: 0.05 });
   const tire = new THREE.Mesh(tireGeo, tireMat);
   tire.castShadow = true;
   spinner.add(tire);
 
-  const hubGeo = new THREE.CylinderGeometry(dims.wheelRadius * 0.5, dims.wheelRadius * 0.5, dims.wheelWidth * 1.02, 8);
+  // Tread knobs: small raised blocks ringing the tire for an off-road/ATV read.
+  const treadMat = new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 1 });
+  const knobCount = 10;
+  for (let i = 0; i < knobCount; i++) {
+    const angle = (i / knobCount) * Math.PI * 2;
+    const knob = new THREE.Mesh(new THREE.BoxGeometry(dims.wheelWidth * 0.92, visualRadius * 0.22, visualRadius * 0.16), treadMat);
+    knob.position.set(0, Math.sin(angle) * visualRadius * 0.97, Math.cos(angle) * visualRadius * 0.97);
+    knob.rotation.x = angle;
+    spinner.add(knob);
+  }
+
+  const hubGeo = new THREE.CylinderGeometry(visualRadius * 0.48, visualRadius * 0.48, dims.wheelWidth * 1.04, 7);
   hubGeo.rotateZ(Math.PI / 2);
-  const hubMat = new THREE.MeshStandardMaterial({ color: colorway.secondary, roughness: 0.4, metalness: 0.6 });
+  const hubMat = new THREE.MeshStandardMaterial({ color: colorway.secondary, roughness: 0.35, metalness: 0.65 });
   spinner.add(new THREE.Mesh(hubGeo, hubMat));
 
+  const capMat = new THREE.MeshStandardMaterial({ color: colorway.glow, emissive: colorway.glow, emissiveIntensity: 0.25, roughness: 0.3 });
+  const cap = new THREE.Mesh(new THREE.CircleGeometry(visualRadius * 0.22, 10), capMat);
+  cap.position.set(dims.wheelWidth / 2 + 0.001, 0, 0);
+  cap.rotation.y = Math.PI / 2;
+  spinner.add(cap);
+  const capBack = cap.clone();
+  capBack.position.x = -dims.wheelWidth / 2 - 0.001;
+  capBack.rotation.y = -Math.PI / 2;
+  spinner.add(capBack);
+
   return spinner;
+}
+
+/** Simple curved fender arch over a wheel, for the chunky ATV silhouette. */
+function buildFender(dims: ReturnType<typeof getVehicleDimensions>, anchor: WheelAnchor, colorway: VehicleColorway): THREE.Mesh {
+  const radius = dims.wheelRadius * 1.32;
+  const arcGeo = new THREE.TorusGeometry(radius, 0.045, 6, 12, Math.PI * 0.95);
+  const arcMat = new THREE.MeshStandardMaterial({ color: colorway.primary, roughness: 0.5, metalness: 0.3 });
+  const fender = new THREE.Mesh(arcGeo, arcMat);
+  fender.position.set(anchor.x, anchor.y + 0.03, anchor.z);
+  fender.rotation.y = Math.PI / 2;
+  fender.rotation.z = Math.PI;
+  fender.castShadow = true;
+  return fender;
 }
 
 /** Builds an original stylized ATV-kart model: an extruded chassis silhouette, roll bar,
@@ -137,37 +178,89 @@ export function buildVehicleModel(definition: VehicleDefinition, colorwayId: str
     root.add(strut);
   }
 
-  // Driver bust: torso + helmeted head + arms toward a handlebar.
+  // Driver bust: torso + helmeted head with goggles + a trailing scarf + arms reaching
+  // a handlebar — a friendly, mascot-like rider silhouette rather than a bare mannequin.
   const driverGroup = new THREE.Group();
   const suitMat = new THREE.MeshStandardMaterial({ color: colorway.secondary, roughness: 0.6 });
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xe8b48c, roughness: 0.7 });
   const helmetMat = new THREE.MeshStandardMaterial({ color: colorway.glow, roughness: 0.3, metalness: 0.5 });
+  const driverSeatZ = -dims.halfLength * 0.1;
+  const driverSeatY = dims.halfHeight * 0.55;
 
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.35, 4, 8), suitMat);
-  torso.position.set(0, dims.halfHeight * 0.55, -dims.halfLength * 0.15);
+  torso.position.set(0, driverSeatY, driverSeatZ);
   torso.castShadow = true;
   driverGroup.add(torso);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), helmetMat);
-  head.position.set(0, dims.halfHeight * 0.55 + 0.42, -dims.halfLength * 0.15);
+  const headY = driverSeatY + 0.42;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 12), helmetMat);
+  head.position.set(0, headY, driverSeatZ);
   head.castShadow = true;
   driverGroup.add(head);
 
-  const visor = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0x0c1f3d, roughness: 0.1, metalness: 0.8 }),
-  );
-  visor.position.set(0, dims.halfHeight * 0.55 + 0.4, -dims.halfLength * 0.15 + 0.12);
-  visor.rotation.x = Math.PI / 2;
-  driverGroup.add(visor);
+  // Helmet racing stripe.
+  const stripeGeo = new THREE.TorusGeometry(0.175, 0.02, 6, 16, Math.PI);
+  const stripe = new THREE.Mesh(stripeGeo, new THREE.MeshStandardMaterial({ color: colorway.primary, roughness: 0.4 }));
+  stripe.position.set(0, headY, driverSeatZ);
+  stripe.rotation.set(Math.PI / 2, 0, 0);
+  driverGroup.add(stripe);
+
+  // Round goggles instead of a full-face visor — friendlier, more "kart racer kid" read.
+  const goggleFrameMat = new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.4, metalness: 0.5 });
+  const goggleLensMat = new THREE.MeshStandardMaterial({ color: 0x38e0ff, emissive: 0x0c1f3d, emissiveIntensity: 0.4, roughness: 0.15, metalness: 0.6 });
+  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.018, 6, 16, Math.PI * 1.1), goggleFrameMat);
+  strap.position.set(0, headY, driverSeatZ);
+  strap.rotation.set(0, Math.PI / 2, Math.PI * 0.45);
+  driverGroup.add(strap);
+  for (const side of [-1, 1]) {
+    const goggle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12), goggleFrameMat);
+    goggle.rotation.x = Math.PI / 2;
+    goggle.position.set(side * 0.07, headY - 0.01, driverSeatZ + 0.14);
+    driverGroup.add(goggle);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.045, 12), goggleLensMat);
+    lens.position.set(side * 0.07, headY - 0.01, driverSeatZ + 0.156);
+    driverGroup.add(lens);
+  }
+
+  // Trailing scarf — a few flattened ribbon segments angled back for a sense of speed.
+  const scarfMat = new THREE.MeshStandardMaterial({ color: colorway.primary, roughness: 0.55, side: THREE.DoubleSide });
+  for (let i = 0; i < 3; i++) {
+    const segment = new THREE.Mesh(new THREE.PlaneGeometry(0.16 - i * 0.02, 0.16), scarfMat);
+    segment.position.set(0, driverSeatY + 0.22 - i * 0.05, driverSeatZ - 0.16 - i * 0.13);
+    segment.rotation.set(Math.PI * 0.12, 0, (i - 1) * 0.15);
+    driverGroup.add(segment);
+  }
 
   for (const side of [-1, 1]) {
     const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.32, 4, 6), skinMat);
-    arm.position.set(side * 0.22, dims.halfHeight * 0.5, -dims.halfLength * 0.15 + 0.35);
+    arm.position.set(side * 0.22, driverSeatY - 0.05, driverSeatZ + 0.35);
     arm.rotation.x = Math.PI / 2.6;
     driverGroup.add(arm);
   }
   root.add(driverGroup);
+
+  // Handlebar the driver's arms reach toward.
+  const handlebarMat = new THREE.MeshStandardMaterial({ color: 0x2a2c30, metalness: 0.7, roughness: 0.35 });
+  const handlebar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, dims.halfWidth * 1.1, 8), handlebarMat);
+  handlebar.rotation.z = Math.PI / 2;
+  handlebar.position.set(0, driverSeatY - 0.02, driverSeatZ + 0.55);
+  root.add(handlebar);
+  const handlebarPostGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.14, 8);
+  const handlebarPost = new THREE.Mesh(handlebarPostGeo, handlebarMat);
+  handlebarPost.position.set(0, driverSeatY - 0.09, driverSeatZ + 0.55);
+  root.add(handlebarPost);
+
+  // Front brush-guard bumper — reads as a chunky off-road nose, distinct from the hood.
+  const bumperMat = new THREE.MeshStandardMaterial({ color: colorway.secondary, metalness: 0.55, roughness: 0.4 });
+  const bumperCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-dims.halfWidth * 0.75, -dims.halfHeight * 0.25, dims.halfLength * 0.92),
+    new THREE.Vector3(-dims.halfWidth * 0.55, -dims.halfHeight * 0.05, dims.halfLength * 1.05),
+    new THREE.Vector3(dims.halfWidth * 0.55, -dims.halfHeight * 0.05, dims.halfLength * 1.05),
+    new THREE.Vector3(dims.halfWidth * 0.75, -dims.halfHeight * 0.25, dims.halfLength * 0.92),
+  ]);
+  const bumper = new THREE.Mesh(new THREE.TubeGeometry(bumperCurve, 12, 0.045, 8, false), bumperMat);
+  bumper.castShadow = true;
+  root.add(bumper);
 
   // Exhaust pipes.
   const exhaustTips: THREE.Object3D[] = [];
@@ -200,7 +293,7 @@ export function buildVehicleModel(definition: VehicleDefinition, colorwayId: str
     root.add(lens);
   }
 
-  // Wheels.
+  // Wheels + fender arches above each one for a chunkier ATV stance.
   const anchors = getWheelAnchors(dims);
   const wheels: WheelRig[] = anchors.map((anchor) => {
     const pivot = new THREE.Group();
@@ -208,6 +301,7 @@ export function buildVehicleModel(definition: VehicleDefinition, colorwayId: str
     const spinner = buildWheel(dims, colorway);
     pivot.add(spinner);
     root.add(pivot);
+    root.add(buildFender(dims, anchor, colorway));
     return { pivot, spinner, anchor };
   });
 

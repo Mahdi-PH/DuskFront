@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.vite
+.git
+*.log
+.env
+tests
+apps/client/public/**/*.map
+coverage
+playwright-report
+test-results

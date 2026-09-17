@@ -2,6 +2,7 @@ import { GRAPHICS_QUALITY_LEVELS, SUPPORTED_LOCALES, type SupportedLocale } from
 import type { Screen } from '../ScreenManager';
 import { localProfileStore, type LocalSettings } from '../../game/LocalProfileStore';
 import { t, setLocale } from '../../i18n';
+import { authClient } from '../../network/AuthClient';
 
 export interface SettingsScreenCallbacks {
   onBack(): void;
@@ -63,6 +64,7 @@ export class SettingsScreen implements Screen {
     header.append(title, closeBtn);
     panel.appendChild(header);
 
+    panel.appendChild(this.buildAccountSection());
     panel.appendChild(this.buildGraphicsSection(settings));
     panel.appendChild(this.buildAudioSection(settings));
     panel.appendChild(this.buildLanguageSection());
@@ -75,6 +77,80 @@ export class SettingsScreen implements Screen {
   private update(patch: Partial<LocalSettings>): void {
     localProfileStore.updateSettings(patch);
     this.callbacks.onSettingsChanged(localProfileStore.get().settings);
+  }
+
+  private buildAccountSection(): HTMLDivElement {
+    const section = document.createElement('div');
+    section.className = 'vi-settings-section';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'vi-settings-section__title';
+    titleEl.textContent = t('settings.account');
+    section.appendChild(titleEl);
+
+    const statusEl = document.createElement('div');
+    statusEl.className = 'vi-empty-state';
+    statusEl.style.padding = '0';
+    statusEl.style.textAlign = 'start';
+    const session = authClient.getSession();
+    statusEl.textContent = !session || session.isGuest ? t('settings.accountGuest') : t('settings.accountSignedIn', { email: session.displayName });
+    section.appendChild(statusEl);
+
+    const emailInput = document.createElement('input');
+    emailInput.className = 'vi-slider';
+    emailInput.type = 'email';
+    emailInput.placeholder = t('settings.email');
+    const passwordInput = document.createElement('input');
+    passwordInput.className = 'vi-slider';
+    passwordInput.type = 'password';
+    passwordInput.placeholder = t('settings.password');
+    const nameInput = document.createElement('input');
+    nameInput.className = 'vi-slider';
+    nameInput.placeholder = t('settings.displayName');
+
+    const messageEl = document.createElement('div');
+    messageEl.style.fontSize = '11px';
+
+    const row = document.createElement('div');
+    row.className = 'vi-row';
+    const signInBtn = document.createElement('button');
+    signInBtn.className = 'vi-btn vi-btn--secondary';
+    signInBtn.textContent = t('settings.signIn');
+    signInBtn.addEventListener('click', () => {
+      void authClient
+        .login(emailInput.value, passwordInput.value)
+        .then(() => {
+          messageEl.textContent = t('settings.accountSuccess');
+          statusEl.textContent = t('settings.accountSignedIn', { email: authClient.getSession()!.displayName });
+        })
+        .catch(() => {
+          messageEl.textContent = t('settings.accountError');
+        });
+    });
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'vi-btn vi-btn--accent';
+    saveBtn.textContent = t('settings.createAccount');
+    saveBtn.addEventListener('click', () => {
+      const session = authClient.getSession();
+      const action =
+        session && !session.isGuest
+          ? Promise.reject(new Error('already upgraded'))
+          : session
+            ? authClient.upgradeToEmail(emailInput.value, passwordInput.value, nameInput.value || session.displayName)
+            : authClient.register(emailInput.value, passwordInput.value, nameInput.value);
+      void action
+        .then(() => {
+          messageEl.textContent = t('settings.accountSuccess');
+          statusEl.textContent = t('settings.accountSignedIn', { email: authClient.getSession()?.displayName ?? emailInput.value });
+        })
+        .catch(() => {
+          messageEl.textContent = t('settings.accountError');
+        });
+    });
+
+    row.append(signInBtn, saveBtn);
+    section.append(emailInput, passwordInput, nameInput, row, messageEl);
+    return section;
   }
 
   private buildGraphicsSection(settings: LocalSettings): HTMLDivElement {
