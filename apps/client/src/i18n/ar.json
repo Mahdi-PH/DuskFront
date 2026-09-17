@@ -66,6 +66,10 @@
   "loading.tip3": "الدروع توقف أي هجوم قادم — استخدمها في التوقيت المناسب.",
   "loading.tip4": "الطرق المختصرة أسرع لكنها أكثر خطورة.",
   "loading.tip5": "المتأخرون في السباق يحصلون على قدرات دفاعية أفضل.",
+  "loading.stageTrack": "جارٍ بناء المسار…",
+  "loading.stageRacers": "جارٍ تجهيز المتسابقين…",
+  "loading.stageReady": "جاهز!",
+  "empty.onlineRequired": "تتطلب هذه الميزة اتصالاً بالإنترنت بحساب جزيرة السرعة. اتصل بخادم اللعب الجماعي لتفعيلها.",
   "network.good": "جيد",
   "network.fair": "متوسط",
   "network.poor": "ضعيف",
@@ -74,5 +78,6 @@
   "mission.usePowerups": "استخدم {target} قدرات",
   "mission.driveDistance": "اقطع {target} كم",
   "mission.finishNoCollision": "أنهِ سباقًا دون اصطدام",
-  "mission.top3Finish": "أنهِ ضمن أفضل 3 مراكز {target} مرات"
+  "mission.top3Finish": "أنهِ ضمن أفضل 3 مراكز {target} مرات",
+  "common.rewardSummary": "+{coins} عملة · +{xp} خبرة"
 }

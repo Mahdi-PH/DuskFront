@@ -66,6 +66,10 @@
   "loading.tip3": "SHIELDS BLOCK EVERY INCOMING ATTACK — TIME THEM WELL.",
   "loading.tip4": "SHORTCUTS ARE FASTER BUT RISKIER.",
   "loading.tip5": "TRAILING RACERS FIND BETTER DEFENSIVE POWER-UPS.",
+  "loading.stageTrack": "Building track…",
+  "loading.stageRacers": "Spawning racers…",
+  "loading.stageReady": "Ready!",
+  "empty.onlineRequired": "This feature needs an online connection to a Velocity Island account. Connect the multiplayer server to unlock it.",
   "network.good": "GOOD",
   "network.fair": "FAIR",
   "network.poor": "POOR",
@@ -74,5 +78,6 @@
   "mission.usePowerups": "Use {target} power-ups",
   "mission.driveDistance": "Drive {target} km",
   "mission.finishNoCollision": "Finish a race without a collision",
-  "mission.top3Finish": "Finish in the top 3, {target} times"
+  "mission.top3Finish": "Finish in the top 3, {target} times",
+  "common.rewardSummary": "+{coins} coins · +{xp} xp"
 }

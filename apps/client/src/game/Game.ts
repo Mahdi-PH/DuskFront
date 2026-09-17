@@ -1,5 +1,5 @@
 import type { AIDifficulty } from '@velocity-island/shared';
-import { getVehicleById, RACE_BALANCE } from '@velocity-island/shared';
+import { getVehicleById, RACE_BALANCE, ECONOMY_BALANCE } from '@velocity-island/shared';
 import { SceneManager } from '../core/SceneManager';
 import { Clock } from '../core/Clock';
 import { EventBus } from '../core/EventBus';
@@ -11,13 +11,16 @@ import { EffectsManager } from '../render/EffectsManager';
 import { GRAPHICS_PROFILES, detectDefaultQuality, type GraphicsProfile } from '../render/GraphicsSettings';
 import { getTrackRuntimeDefinition, getTrackSkyPresetId } from '../tracks/TrackRegistry';
 import { buildTrack, type BuiltTrack } from '../tracks/TrackBuilder';
-import { RaceManager } from './RaceManager';
+import { RaceManager, type RacerRuntime } from './RaceManager';
 import { PowerUpSystem } from '../powerups/PowerUpSystem';
 import { AIController } from '../ai/AIController';
 import { InputManager } from '../input/InputManager';
 import { TouchControls } from '../input/TouchControls';
 import { RaceHUD } from '../ui/RaceHUD';
 import type { GameEventMap } from './GameEvents';
+import { localProfileStore } from './LocalProfileStore';
+import type { RaceResultsData } from '../ui/screens/ResultsScreen';
+import type { LocalSettings } from './LocalProfileStore';
 
 const BOT_NAMES = ['ZENITH', 'ROCKET', 'BLAZE', 'VORTEX', 'PIXEL', 'SHADOW', 'NOVA'];
 const RACER_COLORS = ['#2fd9c9', '#ff5c6c', '#ff7a3d', '#1e6fb8', '#2fb872', '#faf6ee', '#9d7bff', '#38e0ff'];
@@ -60,7 +63,16 @@ export class Game {
   private graphicsProfile: GraphicsProfile;
   private rafHandle: number | null = null;
   private lastUsePowerUpInput = false;
+  private lastPauseInput = false;
   private displayNames = new Map<string, string>();
+  private paused = false;
+  private raceFinishReported = false;
+  private localDriftCount = 0;
+  private wasLocalDrifting = false;
+  private localDistanceMeters = 0;
+
+  onRaceFinished: ((results: RaceResultsData) => void) | null = null;
+  onPauseToggled: ((paused: boolean) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, uiContainer: HTMLElement) {
     this.graphicsProfile = GRAPHICS_PROFILES[detectDefaultQuality()];
@@ -70,6 +82,13 @@ export class Game {
     this.touchControls = new TouchControls(uiContainer);
     this.touchControls.subscribe((state) => this.inputManager.setTouchState(state));
     this.hud = new RaceHUD(uiContainer);
+    this.applySettings(localProfileStore.get().settings);
+  }
+
+  applySettings(settings: LocalSettings): void {
+    this.inputManager.setAutoAccelerate(settings.autoAccelerate);
+    this.sceneManager.chaseCamera.setAccessibility(settings.reducedMotion || !settings.cameraShakeEnabled);
+    this.setGraphicsProfile(GRAPHICS_PROFILES[settings.graphicsQuality]);
   }
 
   static async create(canvas: HTMLCanvasElement, uiContainer: HTMLElement): Promise<Game> {
@@ -149,6 +168,22 @@ export class Game {
     this.rafHandle = null;
   }
 
+  resumeFromPause(): void {
+    this.paused = false;
+  }
+
+  isPaused(): boolean {
+    return this.paused;
+  }
+
+  resetTouchLayout(): void {
+    this.touchControls.resetLayout();
+  }
+
+  setTouchEditMode(enabled: boolean): void {
+    this.touchControls.setEditMode(enabled);
+  }
+
   private pickBotVehicleId(excludeId: string, seed: number): string {
     const pool = ['toro', 'vortex', 'wave', 'fang', 'titan', 'spark', 'mirage', 'comet'].filter((id) => id !== excludeId);
     return pool[seed % pool.length]!;
@@ -159,6 +194,13 @@ export class Game {
     if (deltaSec <= 0) return;
 
     const localInput = this.inputManager.poll();
+    if (localInput.pause && !this.lastPauseInput) {
+      this.paused = !this.paused;
+      this.onPauseToggled?.(this.paused);
+    }
+    this.lastPauseInput = localInput.pause;
+    if (this.paused) return;
+
     const localRacer = this.raceManager.getRacer(this.localPlayerId);
     if (localRacer) localRacer.controller.setInput(localInput);
 
@@ -196,6 +238,18 @@ export class Game {
     this.raceManager.update(deltaSec);
     if (this.raceManager.phase === 'racing') {
       this.powerUps.update(deltaSec, this.raceManager.getAllRacers(), usePowerUpRequested);
+    }
+
+    if (localRacer && this.raceManager.phase === 'racing') {
+      this.localDistanceMeters += Math.abs(localRacer.controller.state.forwardSpeedMs) * deltaSec;
+      const isDrifting = localRacer.controller.state.isDrifting;
+      if (this.wasLocalDrifting && !isDrifting) this.localDriftCount += 1;
+      this.wasLocalDrifting = isDrifting;
+    }
+
+    if (localRacer?.finished && !this.raceFinishReported) {
+      this.raceFinishReported = true;
+      this.reportRaceResults(localRacer);
     }
 
     for (const view of this.views.values()) view.update(deltaSec);
@@ -260,6 +314,37 @@ export class Game {
       standings,
       minimapMarkers,
       wrongWay: localRacer.wrongWaySec > RACE_BALANCE.wrongWay.warnAfterSec,
+    });
+  }
+
+  private reportRaceResults(localRacer: RacerRuntime): void {
+    const position = localRacer.position;
+    const totalRacers = this.raceManager.getAllRacers().length;
+    const coinsBase = ECONOMY_BALANCE.coinsByPosition[position - 1] ?? 10;
+    const xpBase = ECONOMY_BALANCE.xpByPosition[position - 1] ?? 10;
+    const xpFromDrift = Math.round(localRacer.driftDistanceMeters * ECONOMY_BALANCE.xpPerDriftPoint);
+    const xpFromPowerUps = localRacer.powerUpsUsedCount * ECONOMY_BALANCE.xpPerPowerUpUsed;
+    const xpFromDistance = Math.round((this.localDistanceMeters / 1000) * ECONOMY_BALANCE.xpPerKmDriven);
+    const noCollisionBonus = localRacer.collisionCount === 0 ? ECONOMY_BALANCE.xpNoCollisionRaceBonus : 0;
+    const xpEarned = xpBase + xpFromDrift + xpFromPowerUps + xpFromDistance + noCollisionBonus;
+
+    localProfileStore.applyRaceRewards(coinsBase, xpEarned);
+    if (position === 1) localProfileStore.bumpMission('win-race', 1);
+    if (position <= 3) localProfileStore.bumpMission('top3-finish', 1);
+    if (localRacer.powerUpsUsedCount > 0) localProfileStore.bumpMission('use-powerups', localRacer.powerUpsUsedCount);
+    if (this.localDriftCount > 0) localProfileStore.bumpMission('drift-count', this.localDriftCount);
+    if (this.localDistanceMeters > 0) localProfileStore.bumpMission('drive-distance-km', this.localDistanceMeters / 1000);
+    if (localRacer.collisionCount === 0) localProfileStore.bumpMission('finish-no-collision', 1);
+
+    this.onRaceFinished?.({
+      position,
+      totalRacers,
+      totalTimeMs: localRacer.totalTimeMs,
+      laps: localRacer.lap,
+      driftDistanceMeters: localRacer.driftDistanceMeters,
+      powerUpsUsed: localRacer.powerUpsUsedCount,
+      xpEarned,
+      coinsEarned: coinsBase,
     });
   }
 

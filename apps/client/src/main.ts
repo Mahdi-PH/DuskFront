@@ -1,30 +1,23 @@
 import './ui/theme.css';
 import './ui/touch-controls.css';
 import './ui/race-hud.css';
+import './ui/menu-screens.css';
 import { initI18n } from './i18n';
-import { Game } from './game/Game';
+import { AppShell } from './game/AppShell';
 
-async function bootstrap(): Promise<void> {
+function bootstrap(): void {
   initI18n();
 
   const canvas = document.getElementById('webgl-canvas') as HTMLCanvasElement;
   const app = document.getElementById('app') as HTMLElement;
 
-  const game = await Game.create(canvas, app);
-  game.startRace({
-    trackId: 'sunset-bay',
-    vehicleId: 'wave',
-    colorwayId: 'ocean-blue',
-    laps: 3,
-    botCount: 7,
-    aiDifficulty: 'normal',
-  });
-  game.start();
-
-  window.addEventListener('beforeunload', () => game.dispose());
+  const shell = new AppShell(canvas, app);
+  shell.start();
 }
 
-bootstrap().catch((err) => {
+try {
+  bootstrap();
+} catch (err) {
   console.error('Failed to start Velocity Island', err);
   const app = document.getElementById('app');
   if (app) {
@@ -33,4 +26,4 @@ bootstrap().catch((err) => {
     fallback.textContent = 'Failed to start the game. Please check the console for details.';
     app.appendChild(fallback);
   }
-});
+}
