@@ -4,6 +4,8 @@ import { PlayScreen } from '../ui/screens/PlayScreen';
 import { Garage } from '../ui/screens/Garage';
 import { SettingsScreen } from '../ui/screens/SettingsScreen';
 import { MissionsScreen } from '../ui/screens/MissionsScreen';
+import { LeaderboardScreen } from '../ui/screens/LeaderboardScreen';
+import { FriendsScreen } from '../ui/screens/FriendsScreen';
 import { EmptyFeatureScreen } from '../ui/screens/EmptyFeatureScreen';
 import { LoadingScreen } from '../ui/screens/LoadingScreen';
 import { ResultsScreen, type RaceResultsData } from '../ui/screens/ResultsScreen';
@@ -38,6 +40,8 @@ export class AppShell {
         onPlay: () => this.showPlayScreen(),
         onGarage: () => this.showGarage(),
         onMissions: () => this.screenManager.show(new MissionsScreen(() => this.showMainMenu())),
+        onLeaderboard: () => this.screenManager.show(new LeaderboardScreen(() => this.showMainMenu())),
+        onFriends: () => this.screenManager.show(new FriendsScreen(() => this.showMainMenu())),
         onSettings: () => this.showSettings(),
         onEmptyFeature: (key) => this.screenManager.show(new EmptyFeatureScreen(key, () => this.showMainMenu())),
       }),

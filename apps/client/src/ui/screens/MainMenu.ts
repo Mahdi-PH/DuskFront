@@ -8,6 +8,8 @@ export interface MainMenuCallbacks {
   onPlay(): void;
   onGarage(): void;
   onMissions(): void;
+  onLeaderboard(): void;
+  onFriends(): void;
   onSettings(): void;
   onEmptyFeature(titleKey: string): void;
 }
@@ -46,8 +48,8 @@ export class MainMenu implements Screen {
       [t('menu.garage'), () => callbacks.onGarage(), true],
       [t('menu.events'), () => callbacks.onEmptyFeature('menu.events'), false],
       [t('menu.missions'), () => callbacks.onMissions(), true],
-      [t('menu.leaderboard'), () => callbacks.onEmptyFeature('menu.leaderboard'), false],
-      [t('menu.friends'), () => callbacks.onEmptyFeature('menu.friends'), false],
+      [t('menu.leaderboard'), () => callbacks.onLeaderboard(), true],
+      [t('menu.friends'), () => callbacks.onFriends(), true],
       [t('menu.settings'), () => callbacks.onSettings(), true],
     ];
     for (const [label, handler, primary] of navItems) {

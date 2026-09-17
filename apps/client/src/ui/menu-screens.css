@@ -319,6 +319,45 @@
   line-height: 1.7;
 }
 
+/* ---- Leaderboard / Friends rows ---- */
+.vi-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.vi-leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(250, 246, 238, 0.04);
+  border: 1px solid rgba(250, 246, 238, 0.08);
+}
+.vi-leaderboard-row__rank {
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+  font-weight: 900;
+  color: var(--color-turquoise);
+}
+.vi-leaderboard-row__name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vi-leaderboard-row__value {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 /* ---- Garage ---- */
 .vi-garage-layout {
   display: grid;
