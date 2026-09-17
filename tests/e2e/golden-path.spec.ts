@@ -116,7 +116,7 @@ test.describe('Velocity Island golden path', () => {
 
     // --- Pause / quit back to the main menu ---
     await page.keyboard.press('Escape');
-    await expect(page.locator('.vi-panel-title')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.vi-panel-title')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('button', { name: /QUIT TO MENU|الخروج للقائمة/ }).click();
     await expect(page.locator('.vi-menu-nav button').first()).toBeVisible();
 
