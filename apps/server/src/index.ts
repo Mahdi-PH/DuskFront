@@ -12,6 +12,7 @@ import { registerLeaderboardRoutes } from './api/leaderboardRoutes.js';
 import { registerFriendsRoutes } from './api/friendsRoutes.js';
 import { registerMissionsRoutes } from './api/missionsRoutes.js';
 import { registerLobbyRoutes } from './api/lobbyRoutes.js';
+import { registerAchievementsRoutes } from './api/achievementsRoutes.js';
 import { RaceRoom } from './rooms/RaceRoom.js';
 
 async function main(): Promise<void> {
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   await registerFriendsRoutes(app);
   await registerMissionsRoutes(app);
   await registerLobbyRoutes(app);
+  await registerAchievementsRoutes(app);
 
   await app.ready();
 

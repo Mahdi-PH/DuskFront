@@ -53,6 +53,44 @@ export class MissionsScreen implements Screen {
       panel.appendChild(row);
     }
 
+    const achievementsTitle = document.createElement('div');
+    achievementsTitle.className = 'vi-settings-section__title';
+    achievementsTitle.style.marginTop = '16px';
+    achievementsTitle.textContent = t('menu.achievements');
+    panel.appendChild(achievementsTitle);
+
+    const achievements = localProfileStore.getAchievementsProgress();
+    for (const achievement of achievements) {
+      const row = document.createElement('div');
+      row.className = `vi-option-card${achievement.unlocked ? ' vi-option-card--selected' : ''}`;
+      row.style.cursor = 'default';
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'vi-row vi-row--spread';
+      const name = document.createElement('div');
+      name.className = 'vi-option-card__title';
+      name.textContent = t(achievement.nameKey);
+      const progressLabel = document.createElement('div');
+      progressLabel.className = 'vi-option-card__subtitle';
+      progressLabel.textContent = achievement.unlocked ? '✓' : `${achievement.progress}/${achievement.target}`;
+      titleRow.append(name, progressLabel);
+
+      const desc = document.createElement('div');
+      desc.className = 'vi-option-card__subtitle';
+      desc.textContent = t(achievement.descKey);
+
+      const barTrack = document.createElement('div');
+      barTrack.className = 'vi-stat-row__bar';
+      barTrack.style.marginTop = '6px';
+      const fill = document.createElement('div');
+      fill.className = 'vi-stat-row__fill';
+      fill.style.width = `${Math.min(100, (achievement.progress / achievement.target) * 100)}%`;
+      barTrack.appendChild(fill);
+
+      row.append(titleRow, desc, barTrack);
+      panel.appendChild(row);
+    }
+
     this.root.appendChild(panel);
   }
 }

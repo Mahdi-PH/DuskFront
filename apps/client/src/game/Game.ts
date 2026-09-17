@@ -485,6 +485,12 @@ export class Game {
     if (this.localDriftCount > 0) localProfileStore.bumpMission('drift-count', this.localDriftCount);
     if (this.localDistanceMeters > 0) localProfileStore.bumpMission('drive-distance-km', this.localDistanceMeters / 1000);
     if (localRacer.collisionCount === 0) localProfileStore.bumpMission('finish-no-collision', 1);
+    localProfileStore.recordRaceResult({
+      won: position === 1,
+      driftMeters: localRacer.driftDistanceMeters,
+      kmDriven: this.localDistanceMeters / 1000,
+      powerUpsUsed: localRacer.powerUpsUsedCount,
+    });
 
     this.onRaceFinished?.({
       position,

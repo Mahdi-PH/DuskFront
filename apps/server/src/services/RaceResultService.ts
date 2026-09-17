@@ -3,6 +3,7 @@ import { ECONOMY_BALANCE } from '@velocity-island/shared';
 import { prisma } from '../db.js';
 import { creditCurrency } from './CurrencyService.js';
 import { awardXp } from './ProgressionService.js';
+import { evaluateAchievements } from './AchievementService.js';
 
 export interface RaceParticipantResult {
   userId: string | null; // null for bots
@@ -76,6 +77,8 @@ export async function persistRaceResult(
           totalPowerUpsUsed: { increment: participant.powerUpsUsed },
         },
       });
+
+      await evaluateAchievements(tx, participant.userId);
 
       await tx.matchHistoryEntry.create({
         data: {

@@ -1,4 +1,12 @@
-import { ECONOMY_BALANCE, levelFromTotalXp, VEHICLES, type VehicleDefinition } from '@velocity-island/shared';
+import { ACHIEVEMENTS, ECONOMY_BALANCE, levelFromTotalXp, VEHICLES, type VehicleDefinition } from '@velocity-island/shared';
+
+export interface LocalStats {
+  racesCompleted: number;
+  racesWon: number;
+  totalDriftMeters: number;
+  totalKmDriven: number;
+  totalPowerUpsUsed: number;
+}
 
 export interface LocalProfile {
   displayName: string;
@@ -10,6 +18,8 @@ export interface LocalProfile {
   settings: LocalSettings;
   dailyMissionProgress: Record<string, number>;
   dailyMissionDate: string;
+  stats: LocalStats;
+  unlockedAchievementIds: string[];
 }
 
 export interface LocalSettings {
@@ -51,6 +61,8 @@ function defaultProfile(): LocalProfile {
     settings: { ...DEFAULT_SETTINGS },
     dailyMissionProgress: {},
     dailyMissionDate: '',
+    stats: { racesCompleted: 0, racesWon: 0, totalDriftMeters: 0, totalKmDriven: 0, totalPowerUpsUsed: 0 },
+    unlockedAchievementIds: [],
   };
 }
 
@@ -70,7 +82,13 @@ export class LocalProfileStore {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultProfile();
       const parsed = JSON.parse(raw) as Partial<LocalProfile>;
-      return { ...defaultProfile(), ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings } };
+      const defaults = defaultProfile();
+      return {
+        ...defaults,
+        ...parsed,
+        settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+        stats: { ...defaults.stats, ...parsed.stats },
+      };
     } catch {
       return defaultProfile();
     }
@@ -120,8 +138,59 @@ export class LocalProfileStore {
     return { leveledUp: after > before, newLevel: after };
   }
 
-  addDriftMissionProgress(meters: number): void {
-    this.bumpMission('drift-count', meters > 0 ? 1 : 0);
+  /** Records the stats a finished race contributes and unlocks any achievements that
+   * just crossed their target, returning the newly-unlocked ids (e.g. for a toast) and
+   * their coin rewards, which are added to the balance immediately. */
+  recordRaceResult(delta: { won: boolean; driftMeters: number; kmDriven: number; powerUpsUsed: number }): string[] {
+    this.profile.stats.racesCompleted += 1;
+    if (delta.won) this.profile.stats.racesWon += 1;
+    this.profile.stats.totalDriftMeters += delta.driftMeters;
+    this.profile.stats.totalKmDriven += delta.kmDriven;
+    this.profile.stats.totalPowerUpsUsed += delta.powerUpsUsed;
+
+    const newlyUnlocked: string[] = [];
+    const levelInfo = this.getLevelInfo();
+    const metrics: Record<string, number> = {
+      totalDriftMeters: this.profile.stats.totalDriftMeters,
+      racesWon: this.profile.stats.racesWon,
+      racesCompleted: this.profile.stats.racesCompleted,
+      totalPowerUpsUsed: this.profile.stats.totalPowerUpsUsed,
+      totalKmDriven: this.profile.stats.totalKmDriven,
+      playerLevel: levelInfo.level,
+      vehiclesUnlocked: this.profile.unlockedVehicleIds.length,
+    };
+    for (const achievement of ACHIEVEMENTS) {
+      if (this.profile.unlockedAchievementIds.includes(achievement.id)) continue;
+      const value = metrics[achievement.metric];
+      if (value === undefined || value < achievement.target) continue;
+      this.profile.unlockedAchievementIds.push(achievement.id);
+      this.profile.coins += achievement.rewardCoins;
+      newlyUnlocked.push(achievement.id);
+    }
+
+    this.save();
+    return newlyUnlocked;
+  }
+
+  getAchievementsProgress(): Array<{ id: string; nameKey: string; descKey: string; target: number; progress: number; unlocked: boolean }> {
+    const levelInfo = this.getLevelInfo();
+    const metrics: Record<string, number> = {
+      totalDriftMeters: this.profile.stats.totalDriftMeters,
+      racesWon: this.profile.stats.racesWon,
+      racesCompleted: this.profile.stats.racesCompleted,
+      totalPowerUpsUsed: this.profile.stats.totalPowerUpsUsed,
+      totalKmDriven: this.profile.stats.totalKmDriven,
+      playerLevel: levelInfo.level,
+      vehiclesUnlocked: this.profile.unlockedVehicleIds.length,
+    };
+    return ACHIEVEMENTS.map((achievement) => ({
+      id: achievement.id,
+      nameKey: achievement.nameKey,
+      descKey: achievement.descKey,
+      target: achievement.target,
+      progress: Math.min(achievement.target, metrics[achievement.metric] ?? 0),
+      unlocked: this.profile.unlockedAchievementIds.includes(achievement.id),
+    }));
   }
 
   bumpMission(missionId: string, amount: number): void {
