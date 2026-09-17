@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to build and release (defaults to the ref that triggered this run)'
+        description: 'Release tag to create/publish as (e.g. v1.0.0). Defaults to the triggering ref name.'
         required: false
 
 permissions:
@@ -24,7 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          # Always build the ref that triggered the run (branch for manual
+          # dispatch, the tag itself for a tag push). `inputs.tag` on manual
+          # dispatch is only a release *name* to publish under — it may not
+          # exist as a git ref yet, so it must never be used for checkout.
+          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
