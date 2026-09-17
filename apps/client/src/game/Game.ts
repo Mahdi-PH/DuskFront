@@ -21,6 +21,7 @@ import type { GameEventMap } from './GameEvents';
 import { localProfileStore } from './LocalProfileStore';
 import type { RaceResultsData } from '../ui/screens/ResultsScreen';
 import type { LocalSettings } from './LocalProfileStore';
+import { AudioDirector } from '../audio/AudioDirector';
 
 const BOT_NAMES = ['ZENITH', 'ROCKET', 'BLAZE', 'VORTEX', 'PIXEL', 'SHADOW', 'NOVA'];
 const RACER_COLORS = ['#2fd9c9', '#ff5c6c', '#ff7a3d', '#1e6fb8', '#2fb872', '#faf6ee', '#9d7bff', '#38e0ff'];
@@ -70,6 +71,8 @@ export class Game {
   private localDriftCount = 0;
   private wasLocalDrifting = false;
   private localDistanceMeters = 0;
+  private readonly audioDirector: AudioDirector;
+  private wasLocalBraking = false;
 
   onRaceFinished: ((results: RaceResultsData) => void) | null = null;
   onPauseToggled: ((paused: boolean) => void) | null = null;
@@ -82,6 +85,7 @@ export class Game {
     this.touchControls = new TouchControls(uiContainer);
     this.touchControls.subscribe((state) => this.inputManager.setTouchState(state));
     this.hud = new RaceHUD(uiContainer);
+    this.audioDirector = new AudioDirector(this.events);
     this.applySettings(localProfileStore.get().settings);
   }
 
@@ -89,6 +93,7 @@ export class Game {
     this.inputManager.setAutoAccelerate(settings.autoAccelerate);
     this.sceneManager.chaseCamera.setAccessibility(settings.reducedMotion || !settings.cameraShakeEnabled);
     this.setGraphicsProfile(GRAPHICS_PROFILES[settings.graphicsQuality]);
+    this.audioDirector.applySettings(settings);
   }
 
   static async create(canvas: HTMLCanvasElement, uiContainer: HTMLElement): Promise<Game> {
@@ -114,6 +119,7 @@ export class Game {
 
     this.raceManager = new RaceManager(this.track, options.laps, this.events);
     this.powerUps = new PowerUpSystem(this.track, this.sceneManager.scene, this.effects, this.events);
+    void this.audioDirector.ensureStarted(localProfileStore.get().settings);
 
     const vehicleDef = getVehicleById(options.vehicleId);
     const localController = new VehicleController(this.physicsWorld, vehicleDef, this.track.startGrid[0]!.position, this.track.startGrid[0]!.yawRad);
@@ -123,6 +129,7 @@ export class Game {
     this.collisionSystem.registerVehicle(this.localPlayerId, localController);
     this.raceManager.addRacer(this.localPlayerId, localController, false, 0);
     this.displayNames.set(this.localPlayerId, 'PLAYER');
+    this.audioDirector.registerVehicle(this.localPlayerId, vehicleDef);
 
     this.bots = [];
     for (let i = 0; i < options.botCount; i++) {
@@ -138,6 +145,7 @@ export class Game {
       this.raceManager.addRacer(botId, botController, true, startIndex);
       this.displayNames.set(botId, BOT_NAMES[i % BOT_NAMES.length]!);
       this.bots.push({ ai: new AIController(this.track, options.aiDifficulty), playerId: botId });
+      this.audioDirector.registerVehicle(botId, botVehicle);
     }
 
     this.sceneManager.chaseCamera.snapToTarget({
@@ -230,6 +238,11 @@ export class Game {
       this.effects.emitImpactBurst(impact.worldPoint, impact.strength);
       const racer = this.raceManager.getRacer(impact.playerId);
       if (racer) this.raceManager.registerCollision(racer);
+      this.events.emit('vehicleCollision', {
+        playerId: impact.playerId,
+        strength: impact.strength,
+        worldPoint: [impact.worldPoint.x, impact.worldPoint.y, impact.worldPoint.z],
+      });
       if (impact.playerId === this.localPlayerId) {
         this.sceneManager.chaseCamera.addImpactShake(impact.strength);
       }
@@ -245,6 +258,28 @@ export class Game {
       const isDrifting = localRacer.controller.state.isDrifting;
       if (this.wasLocalDrifting && !isDrifting) this.localDriftCount += 1;
       this.wasLocalDrifting = isDrifting;
+
+      const isBraking = localInput.brake > 0.5 && localRacer.controller.state.isGrounded;
+      if (isBraking && !this.wasLocalBraking) this.audioDirector.brake();
+      this.wasLocalBraking = isBraking;
+    }
+
+    for (const racer of this.raceManager.getAllRacers()) {
+      if (racer.controller.state.isBoosting && racer.controller.state.boostTimeRemainingSec > racer.controller.definition.physics.boostDuration - 0.05) {
+        this.events.emit('boostActivated', { playerId: racer.playerId });
+      }
+      const speedRatio = Math.abs(racer.controller.state.forwardSpeedMs) / racer.controller.definition.physics.topSpeed;
+      const distanceAttenuation =
+        racer.playerId === this.localPlayerId
+          ? 1
+          : Math.max(0, 1 - racer.controller.getWorldPosition().distanceTo(localRacer?.controller.getWorldPosition() ?? racer.controller.getWorldPosition()) / 40);
+      this.audioDirector.updateVehicle(
+        racer.playerId,
+        speedRatio,
+        racer.controller.state.isGrounded ? Math.max(0.15, speedRatio) : 0.1,
+        racer.controller.state.isBoosting,
+        distanceAttenuation,
+      );
     }
 
     if (localRacer?.finished && !this.raceFinishReported) {
@@ -354,5 +389,6 @@ export class Game {
     this.sceneManager.dispose();
     this.physicsWorld.destroy();
     this.hud.dispose();
+    this.audioDirector.dispose();
   }
 }
