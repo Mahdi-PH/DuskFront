@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+*.local
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+.vite/
+database/prisma/dev.db
+.turbo/

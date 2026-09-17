@@ -1,0 +1,33 @@
+{
+  "$schema": "economy-balance-v1",
+  "coinsByPosition": [200, 150, 120, 100, 80, 60, 40, 20],
+  "xpByPosition": [300, 240, 200, 170, 140, 110, 80, 50],
+  "xpPerDriftPoint": 0.02,
+  "xpPerPowerUpUsed": 5,
+  "xpPerKmDriven": 3,
+  "xpPerfectLapBonus": 40,
+  "xpNoCollisionRaceBonus": 60,
+  "level": {
+    "maxLevel": 50,
+    "baseXp": 500,
+    "growthFactor": 1.085
+  },
+  "dailyMissions": {
+    "countPerDay": 3,
+    "rerollCostCoins": 50,
+    "pool": [
+      { "id": "win-race", "descriptionKey": "mission.winRace", "target": 1, "rewardCoins": 100, "rewardXp": 150 },
+      { "id": "drift-count", "descriptionKey": "mission.driftCount", "target": 10, "rewardCoins": 60, "rewardXp": 100 },
+      { "id": "use-powerups", "descriptionKey": "mission.usePowerups", "target": 5, "rewardCoins": 60, "rewardXp": 100 },
+      { "id": "drive-distance-km", "descriptionKey": "mission.driveDistance", "target": 3, "rewardCoins": 70, "rewardXp": 110 },
+      { "id": "finish-no-collision", "descriptionKey": "mission.finishNoCollision", "target": 1, "rewardCoins": 90, "rewardXp": 140 },
+      { "id": "top3-finish", "descriptionKey": "mission.top3Finish", "target": 3, "rewardCoins": 80, "rewardXp": 120 }
+    ]
+  },
+  "vehicleUnlockCoinCost": {
+    "level-gated-vehicles-only": true,
+    "cosmeticSkinBaseCost": 250,
+    "cosmeticSkinRareCost": 600
+  },
+  "payToWin": false
+}

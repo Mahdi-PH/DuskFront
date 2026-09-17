@@ -1,0 +1,30 @@
+{
+  "$schema": "race-balance-v1",
+  "maxPlayers": 8,
+  "minHumanPlayersBeforeBotFill": 1,
+  "botFillDelaySec": 12,
+  "countdown": { "steps": [3, 2, 1], "goDisplaySec": 0.8 },
+  "respawn": {
+    "offTrackGraceSec": 1.2,
+    "invulnerabilitySec": 2.0,
+    "flipDetectionAngleDeg": 75,
+    "flipTimeoutSec": 1.5,
+    "stuckSpeedThreshold": 0.5,
+    "stuckTimeoutSec": 2.5
+  },
+  "rubberBanding": {
+    "enabled": true,
+    "maxCatchupSpeedBonus": 0.06,
+    "maxLeaderSpeedPenalty": 0.0,
+    "applyRange": [4, 8],
+    "note": "Only trailing pack (positions 4-8) receive a small top-speed bonus vs leaders; leaders are never slowed directly."
+  },
+  "wrongWay": {
+    "warnAfterSec": 1.5,
+    "forceCorrectAfterSec": 4.0
+  },
+  "reconnectWindowSec": 45,
+  "disconnectBotTakeoverDelaySec": 5,
+  "networkTickRateHz": 24,
+  "clientInterpolationDelayMs": 100
+}

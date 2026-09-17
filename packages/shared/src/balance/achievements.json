@@ -1,0 +1,25 @@
+{
+  "$schema": "achievement-balance-v1",
+  "achievements": [
+    { "id": "drift-master", "nameKey": "achievement.driftMaster", "descKey": "achievement.driftMaster.desc", "target": 10000, "metric": "totalDriftMeters", "rewardCoins": 300 },
+    { "id": "perfect-lap", "nameKey": "achievement.perfectLap", "descKey": "achievement.perfectLap.desc", "target": 1, "metric": "perfectLaps", "rewardCoins": 150 },
+    { "id": "speed-demon", "nameKey": "achievement.speedDemon", "descKey": "achievement.speedDemon.desc", "target": 1, "metric": "topSpeedReachedKmh200", "rewardCoins": 200 },
+    { "id": "no-brakes", "nameKey": "achievement.noBrakes", "descKey": "achievement.noBrakes.desc", "target": 1, "metric": "raceFinishedWithoutBraking", "rewardCoins": 250 },
+    { "id": "power-player", "nameKey": "achievement.powerPlayer", "descKey": "achievement.powerPlayer.desc", "target": 250, "metric": "totalPowerUpsUsed", "rewardCoins": 300 },
+    { "id": "island-champion", "nameKey": "achievement.islandChampion", "descKey": "achievement.islandChampion.desc", "target": 6, "metric": "distinctTracksWon", "rewardCoins": 500 },
+    { "id": "first-victory", "nameKey": "achievement.firstVictory", "descKey": "achievement.firstVictory.desc", "target": 1, "metric": "racesWon", "rewardCoins": 100 },
+    { "id": "veteran-racer", "nameKey": "achievement.veteranRacer", "descKey": "achievement.veteranRacer.desc", "target": 100, "metric": "racesCompleted", "rewardCoins": 400 },
+    { "id": "garage-collector", "nameKey": "achievement.garageCollector", "descKey": "achievement.garageCollector.desc", "target": 8, "metric": "vehiclesUnlocked", "rewardCoins": 350 },
+    { "id": "level-10", "nameKey": "achievement.level10", "descKey": "achievement.level10.desc", "target": 10, "metric": "playerLevel", "rewardCoins": 150 },
+    { "id": "level-25", "nameKey": "achievement.level25", "descKey": "achievement.level25.desc", "target": 25, "metric": "playerLevel", "rewardCoins": 300 },
+    { "id": "level-50", "nameKey": "achievement.level50", "descKey": "achievement.level50.desc", "target": 50, "metric": "playerLevel", "rewardCoins": 700 },
+    { "id": "shortcut-scout", "nameKey": "achievement.shortcutScout", "descKey": "achievement.shortcutScout.desc", "target": 25, "metric": "shortcutsTaken", "rewardCoins": 150 },
+    { "id": "untouchable", "nameKey": "achievement.untouchable", "descKey": "achievement.untouchable.desc", "target": 5, "metric": "racesWithoutCollisionWon", "rewardCoins": 350 },
+    { "id": "rocket-scientist", "nameKey": "achievement.rocketScientist", "descKey": "achievement.rocketScientist.desc", "target": 100, "metric": "rocketHits", "rewardCoins": 250 },
+    { "id": "shield-wall", "nameKey": "achievement.shieldWall", "descKey": "achievement.shieldWall.desc", "target": 100, "metric": "attacksBlocked", "rewardCoins": 200 },
+    { "id": "comeback-king", "nameKey": "achievement.comebackKing", "descKey": "achievement.comebackKing.desc", "target": 10, "metric": "lastToFirstFinishes", "rewardCoins": 400 },
+    { "id": "daily-devotee", "nameKey": "achievement.dailyDevotee", "descKey": "achievement.dailyDevotee.desc", "target": 30, "metric": "dailyMissionsCompleted", "rewardCoins": 350 },
+    { "id": "social-racer", "nameKey": "achievement.socialRacer", "descKey": "achievement.socialRacer.desc", "target": 5, "metric": "friendsAdded", "rewardCoins": 100 },
+    { "id": "marathon-driver", "nameKey": "achievement.marathonDriver", "descKey": "achievement.marathonDriver.desc", "target": 500, "metric": "totalKmDriven", "rewardCoins": 500 }
+  ]
+}

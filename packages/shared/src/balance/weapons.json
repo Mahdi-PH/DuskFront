@@ -1,0 +1,103 @@
+{
+  "$schema": "weapon-balance-v1",
+  "weapons": [
+    {
+      "id": "fireball",
+      "name": "FIREBALL",
+      "category": "offensive",
+      "targeting": "forward-straight",
+      "speed": 58,
+      "lifetimeSec": 3.5,
+      "impactStunSec": 0.9,
+      "impactSpeedPenalty": 0.55,
+      "splashRadius": 2.2,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "shockwave",
+      "name": "SHOCKWAVE",
+      "category": "offensive",
+      "targeting": "radius-self",
+      "radius": 9,
+      "impactStunSec": 0.7,
+      "impactSpeedPenalty": 0.4,
+      "expandSpeed": 22,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "turbo",
+      "name": "TURBO",
+      "category": "utility",
+      "targeting": "self",
+      "boostForceMultiplier": 1.6,
+      "durationSec": 2.2,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "shield",
+      "name": "SHIELD",
+      "category": "defensive",
+      "targeting": "self",
+      "durationSec": 6,
+      "blocksProjectiles": true,
+      "blocksCollisionStun": true,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "magnet",
+      "name": "MAGNET",
+      "category": "utility",
+      "targeting": "radius-self",
+      "radius": 14,
+      "pullForce": 18,
+      "durationSec": 4,
+      "affects": ["coins", "crates"],
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "oilTrap",
+      "name": "OIL TRAP",
+      "category": "trap",
+      "targeting": "drop-behind",
+      "dropDistance": 2.5,
+      "radius": 1.8,
+      "spinTorque": 12,
+      "speedPenalty": 0.5,
+      "durationSec": 0.9,
+      "lifetimeSec": 25,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "emp",
+      "name": "EMP",
+      "category": "offensive",
+      "targeting": "radius-forward-cone",
+      "coneAngleDeg": 65,
+      "range": 20,
+      "boostDisableSec": 3.5,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "rocket",
+      "name": "ROCKET",
+      "category": "offensive",
+      "targeting": "homing",
+      "speed": 44,
+      "turnRateDegPerSec": 140,
+      "lifetimeSec": 5,
+      "impactStunSec": 1.1,
+      "impactSpeedPenalty": 0.65,
+      "cooldownSec": 0.4
+    },
+    {
+      "id": "phantom",
+      "name": "PHANTOM",
+      "category": "defensive",
+      "targeting": "self",
+      "durationSec": 4,
+      "passThroughHazards": true,
+      "collisionImmune": true,
+      "cooldownSec": 0.4
+    }
+  ]
+}

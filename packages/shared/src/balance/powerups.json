@@ -1,0 +1,27 @@
+{
+  "$schema": "powerup-balance-v1",
+  "crates": {
+    "respawnSec": 8,
+    "pickupRadius": 1.6,
+    "inventorySlots": 1
+  },
+  "rarityByPositionBand": {
+    "leader": {
+      "positionRange": [1, 2],
+      "weights": { "fireball": 10, "shockwave": 5, "turbo": 10, "shield": 25, "magnet": 15, "oilTrap": 15, "emp": 10, "rocket": 5, "phantom": 5 }
+    },
+    "midpack": {
+      "positionRange": [3, 6],
+      "weights": { "fireball": 15, "shockwave": 12, "turbo": 15, "shield": 12, "magnet": 12, "oilTrap": 10, "emp": 10, "rocket": 9, "phantom": 5 }
+    },
+    "trailing": {
+      "positionRange": [7, 8],
+      "weights": { "fireball": 12, "shockwave": 10, "turbo": 18, "shield": 8, "magnet": 8, "oilTrap": 6, "emp": 8, "rocket": 22, "phantom": 8 }
+    }
+  },
+  "antiFrustration": {
+    "enabled": true,
+    "maxOutcomeShiftPositions": 1,
+    "description": "Rarity tables only bias which power-up trailing/leading players draw; server never alters finish order directly."
+  }
+}
