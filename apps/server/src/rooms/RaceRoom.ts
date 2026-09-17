@@ -61,12 +61,21 @@ export class RaceRoom extends Room<RaceRoomState> {
     this.state.trackId = options.trackId;
     this.state.mode = options.mode;
     this.state.totalLaps = options.laps ?? getTrackById(options.trackId).defaultLaps;
-    if (options.roomCode) void this.setMetadata({ roomCode: options.roomCode });
+    if (options.roomCode) {
+      void this.setMetadata({
+        roomCode: options.roomCode,
+        trackId: options.trackId,
+        laps: this.state.totalLaps,
+        botCount: options.botCount ?? 0,
+        aiDifficulty: options.aiDifficulty ?? 'normal',
+      });
+    }
 
     this.setSimulationInterval(() => this.tick(), 1000 / RACE_BALANCE.networkTickRateHz);
 
     this.onMessage('checkpoint', (client, message) => this.handleCheckpoint(client, message));
     this.onMessage('telemetry', (client, message) => this.handleTelemetry(client, message));
+    this.onMessage('position', (client, message) => this.handlePositionReport(client, message));
     this.onMessage('ready', () => {
       // A human pressing ready shouldn't have to wait out the full bot-fill grace
       // period — fill immediately (if eligible) and start the countdown right away.
@@ -200,6 +209,29 @@ export class RaceRoom extends Room<RaceRoomState> {
 
     this.updateStandings();
     this.maybeFinishRace();
+  }
+
+  /** High-frequency, low-stakes position relay used purely so other clients can render
+   * a smoothly-moving ghost for this player between checkpoint crossings — lap/finish
+   * authority always comes from handleCheckpoint, never from this. Still runs through
+   * the same teleport/speed sanity check so a hostile client can't broadcast an
+   * arbitrary position to everyone else's screen. */
+  private handlePositionReport(client: Client, message: { x: number; y: number; z: number; rotY: number; speedKmh: number; atMs: number }): void {
+    const player = this.state.players.get(client.sessionId);
+    const runtime = this.runtimeByPlayerId.get(client.sessionId);
+    if (!player || !runtime || this.state.phase !== 'racing') return;
+
+    const valid = runtime.inputValidator.validateSample({ x: message.x, y: message.y, z: message.z, atMs: message.atMs });
+    if (!valid) {
+      player.flaggedForReview = runtime.inputValidator.isFlaggedForReview;
+      return;
+    }
+
+    player.x = message.x;
+    player.y = message.y;
+    player.z = message.z;
+    player.rotY = message.rotY;
+    player.speedKmh = message.speedKmh;
   }
 
   private updateStandings(): void {

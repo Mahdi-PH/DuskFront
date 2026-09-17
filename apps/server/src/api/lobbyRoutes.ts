@@ -37,6 +37,13 @@ export async function registerLobbyRoutes(app: FastifyInstance): Promise<void> {
     const room = rooms[0];
     if (!room) return reply.code(404).send({ error: 'room_not_found' });
 
-    return reply.send({ roomId: room.roomId });
+    const metadata = room.metadata as { trackId?: string; laps?: number; botCount?: number; aiDifficulty?: string } | undefined;
+    return reply.send({
+      roomId: room.roomId,
+      trackId: metadata?.trackId ?? '',
+      laps: metadata?.laps ?? 3,
+      botCount: metadata?.botCount ?? 0,
+      aiDifficulty: metadata?.aiDifficulty ?? 'normal',
+    });
   });
 }

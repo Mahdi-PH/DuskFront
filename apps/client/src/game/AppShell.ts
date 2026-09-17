@@ -11,6 +11,7 @@ import { Game, type RaceSetupOptions } from './Game';
 import { localProfileStore } from './LocalProfileStore';
 import { getTrackById } from '@velocity-island/shared';
 import { t } from '../i18n';
+import { authClient } from '../network/AuthClient';
 
 /** Top-level navigation controller: owns the ScreenManager and the currently-running
  * Game instance (if any), wiring menu screens to race setup/results and back. */
@@ -47,10 +48,61 @@ export class AppShell {
     this.screenManager.show(
       new PlayScreen({
         onBack: () => this.showMainMenu(),
-        onEmptyFeature: (key) => this.screenManager.show(new EmptyFeatureScreen(key, () => this.showPlayScreen())),
         onStartRace: (options) => this.startRace(options),
+        privateLobby: {
+          onCreateRoom: (options) => this.startRace(options),
+          onJoinRoom: (roomCode, vehicle) => this.joinPrivateRoom(roomCode, vehicle),
+        },
       }),
     );
+  }
+
+  private async joinPrivateRoom(roomCode: string, vehicle: Pick<RaceSetupOptions, 'vehicleId' | 'colorwayId'>): Promise<void> {
+    try {
+      const session = await authClient.ensureSession();
+      const res = await authClient.authorizedFetch(`/lobby/join/${roomCode}`);
+      if (!res.ok) {
+        this.screenManager.show(new EmptyFeatureScreen('play.privateLobby', () => this.showPlayScreen()));
+        return;
+      }
+      const roomInfo = (await res.json()) as { roomId: string; trackId: string; laps: number };
+
+      const loading = new LoadingScreen(getTrackById(roomInfo.trackId).name);
+      this.screenManager.show(loading);
+      loading.setProgress(30, t('loading.stageTrack'));
+
+      this.game = await Game.create(this.canvas, this.uiContainer);
+      this.game.onRaceFinished = (results) => this.showResults(results);
+      this.game.onPauseToggled = (paused) => this.togglePauseOverlay(paused);
+      this.game.applySettings(localProfileStore.get().settings);
+
+      // Joining an existing room means the host already fixed the track/laps — the
+      // local race must be configured to match, not to whatever this client last picked.
+      this.game.startRace({
+        trackId: roomInfo.trackId,
+        vehicleId: vehicle.vehicleId,
+        colorwayId: vehicle.colorwayId,
+        laps: roomInfo.laps,
+        botCount: 0,
+        aiDifficulty: 'normal',
+      });
+
+      await this.game.joinOnlineRoomById(roomInfo.roomId, {
+        accessToken: session.accessToken,
+        vehicleId: vehicle.vehicleId,
+        displayName: session.displayName,
+        colorwayId: vehicle.colorwayId,
+        trackId: roomInfo.trackId,
+        mode: 'private',
+      });
+
+      loading.setProgress(100, t('loading.stageReady'));
+      this.screenManager.hideAll();
+      this.game.start();
+    } catch (err) {
+      console.error('Failed to join private room:', err);
+      this.screenManager.show(new EmptyFeatureScreen('play.privateLobby', () => this.showPlayScreen()));
+    }
   }
 
   private showGarage(): void {
@@ -88,7 +140,63 @@ export class AppShell {
 
     this.screenManager.hideAll();
     this.game.startRace(options);
+
+    if (options.online?.mode === 'quick' || options.online?.mode === 'ranked') {
+      try {
+        const session = await authClient.ensureSession();
+        await this.game.enableOnlineMode({
+          accessToken: session.accessToken,
+          vehicleId: options.vehicleId,
+          displayName: session.displayName,
+          colorwayId: options.colorwayId,
+          trackId: options.trackId,
+          mode: options.online.mode,
+          laps: options.laps,
+          botCount: options.botCount,
+          aiDifficulty: options.aiDifficulty,
+        });
+      } catch (err) {
+        // Online connection failed (server unreachable, etc) — the race already
+        // started locally, so fail soft and let the player keep racing offline
+        // rather than losing progress on a connection hiccup.
+        console.error('Online mode unavailable, continuing offline:', err);
+      }
+    } else if (options.online?.mode === 'private') {
+      try {
+        const session = await authClient.ensureSession();
+        const res = await authClient.authorizedFetch('/lobby/create', {
+          method: 'POST',
+          body: JSON.stringify({ trackId: options.trackId, laps: options.laps, botCount: options.botCount, aiDifficulty: options.aiDifficulty }),
+        });
+        if (res.ok) {
+          const { roomId, roomCode } = (await res.json()) as { roomId: string; roomCode: string };
+          await this.game.joinOnlineRoomById(roomId, {
+            accessToken: session.accessToken,
+            vehicleId: options.vehicleId,
+            displayName: session.displayName,
+            colorwayId: options.colorwayId,
+            trackId: options.trackId,
+            mode: 'private',
+          });
+          this.showRoomCodeBanner(roomCode);
+        }
+      } catch (err) {
+        console.error('Failed to create private room, continuing offline:', err);
+      }
+    }
+
     this.game.start();
+  }
+
+  private showRoomCodeBanner(roomCode: string): void {
+    const banner = document.createElement('div');
+    banner.className = 'vi-hud-network vi-glass';
+    banner.style.bottom = 'auto';
+    banner.style.top = '90px';
+    banner.style.left = '50%';
+    banner.textContent = `ROOM CODE: ${roomCode}`;
+    this.uiContainer.appendChild(banner);
+    setTimeout(() => banner.remove(), 8000);
   }
 
   private togglePauseOverlay(paused: boolean): void {

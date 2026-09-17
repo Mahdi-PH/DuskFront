@@ -4,13 +4,19 @@ import type { RaceSetupOptions } from '../../game/Game';
 import { localProfileStore } from '../../game/LocalProfileStore';
 import { t } from '../../i18n';
 
+export interface PrivateLobbyCallbacks {
+  onCreateRoom(options: RaceSetupOptions): void;
+  onJoinRoom(roomCode: string, options: Pick<RaceSetupOptions, 'vehicleId' | 'colorwayId'>): void;
+}
+
 export interface PlayScreenCallbacks {
   onStartRace(options: RaceSetupOptions): void;
   onBack(): void;
-  onEmptyFeature(titleKey: string): void;
+  privateLobby: PrivateLobbyCallbacks;
 }
 
 const DIFFICULTIES: AIDifficulty[] = ['easy', 'normal', 'hard', 'expert'];
+type PlayMode = 'quick' | 'training' | 'ranked' | 'private';
 
 export class PlayScreen implements Screen {
   readonly root: HTMLDivElement;
@@ -18,8 +24,14 @@ export class PlayScreen implements Screen {
   private laps = 3;
   private bots = 7;
   private difficulty: AIDifficulty = 'normal';
+  private mode: PlayMode = 'quick';
+  private online = false;
   private trackGrid: HTMLDivElement;
   private difficultyGrid!: HTMLDivElement;
+  private onlineToggleRow!: HTMLDivElement;
+  private botsFieldWrapper!: HTMLDivElement;
+  private startBtn!: HTMLButtonElement;
+  private privateLobbyPanel!: HTMLDivElement;
 
   constructor(callbacks: PlayScreenCallbacks) {
     this.root = document.createElement('div');
@@ -41,17 +53,23 @@ export class PlayScreen implements Screen {
 
     const modeRow = document.createElement('div');
     modeRow.className = 'vi-row';
-    const modes: Array<[string, () => void]> = [
-      [t('play.quickRace'), () => {}],
-      [t('play.training'), () => {}],
-      [t('play.ranked'), () => callbacks.onEmptyFeature('play.ranked')],
-      [t('play.privateLobby'), () => callbacks.onEmptyFeature('play.privateLobby')],
+    const modes: Array<[string, PlayMode]> = [
+      [t('play.quickRace'), 'quick'],
+      [t('play.training'), 'training'],
+      [t('play.ranked'), 'ranked'],
+      [t('play.privateLobby'), 'private'],
     ];
-    modes.forEach(([label, handler], i) => {
+    const modeButtons: HTMLButtonElement[] = [];
+    modes.forEach(([label, mode]) => {
       const btn = document.createElement('button');
-      btn.className = `vi-btn ${i === 0 ? '' : 'vi-btn--secondary'}`.trim();
+      btn.className = `vi-btn ${mode === this.mode ? '' : 'vi-btn--secondary'}`.trim();
       btn.textContent = label;
-      btn.addEventListener('click', handler);
+      btn.addEventListener('click', () => {
+        this.mode = mode;
+        modeButtons.forEach((b, i) => b.classList.toggle('vi-btn--secondary', modes[i]![1] !== mode));
+        this.updateModeVisibility();
+      });
+      modeButtons.push(btn);
       modeRow.appendChild(btn);
     });
 
@@ -72,8 +90,26 @@ export class PlayScreen implements Screen {
     const botsField = this.buildStepper(t('play.bots'), 0, 7, this.bots, (v) => {
       this.bots = v;
     });
+    this.botsFieldWrapper = botsField.el;
 
     configRow.append(lapsField.el, botsField.el);
+
+    this.onlineToggleRow = document.createElement('div');
+    this.onlineToggleRow.className = 'vi-row vi-row--spread';
+    const onlineLabel = document.createElement('div');
+    onlineLabel.className = 'vi-field-label';
+    onlineLabel.textContent = 'ONLINE';
+    const onlineToggle = document.createElement('div');
+    onlineToggle.className = 'vi-toggle';
+    const onlineKnob = document.createElement('div');
+    onlineKnob.className = 'vi-toggle__knob';
+    onlineToggle.appendChild(onlineKnob);
+    onlineToggle.addEventListener('click', () => {
+      this.online = !this.online;
+      onlineToggle.classList.toggle('vi-toggle--on', this.online);
+      this.updateModeVisibility();
+    });
+    this.onlineToggleRow.append(onlineLabel, onlineToggle);
 
     const difficultyLabel = document.createElement('div');
     difficultyLabel.className = 'vi-field-label';
@@ -82,23 +118,88 @@ export class PlayScreen implements Screen {
     this.difficultyGrid.className = 'vi-option-grid';
     this.renderDifficultyGrid();
 
-    const startBtn = document.createElement('button');
-    startBtn.className = 'vi-btn vi-btn--accent';
-    startBtn.textContent = t('play.start');
-    startBtn.addEventListener('click', () => {
+    this.startBtn = document.createElement('button');
+    this.startBtn.className = 'vi-btn vi-btn--accent';
+    this.startBtn.textContent = t('play.start');
+    this.startBtn.addEventListener('click', () => {
       const profile = localProfileStore.get();
       callbacks.onStartRace({
         trackId: this.selectedTrackId,
         vehicleId: profile.selectedVehicleId,
         colorwayId: profile.selectedColorwayId,
         laps: this.laps,
-        botCount: this.bots,
+        botCount: this.online ? 0 : this.bots,
         aiDifficulty: this.difficulty,
+        online: this.online ? { mode: this.mode === 'ranked' ? 'ranked' : 'quick' } : undefined,
       });
     });
 
-    panel.append(header, modeRow, trackLabel, this.trackGrid, configRow, difficultyLabel, this.difficultyGrid, startBtn);
+    this.privateLobbyPanel = this.buildPrivateLobbyPanel(callbacks.privateLobby);
+
+    panel.append(
+      header,
+      modeRow,
+      trackLabel,
+      this.trackGrid,
+      configRow,
+      this.onlineToggleRow,
+      difficultyLabel,
+      this.difficultyGrid,
+      this.startBtn,
+      this.privateLobbyPanel,
+    );
     this.root.appendChild(panel);
+    this.updateModeVisibility();
+  }
+
+  private updateModeVisibility(): void {
+    const isPrivate = this.mode === 'private';
+    this.privateLobbyPanel.classList.toggle('vi-hidden', !isPrivate);
+    this.startBtn.classList.toggle('vi-hidden', isPrivate);
+    this.onlineToggleRow.classList.toggle('vi-hidden', isPrivate || this.mode === 'training');
+    this.botsFieldWrapper.classList.toggle('vi-hidden', this.online && !isPrivate);
+  }
+
+  private buildPrivateLobbyPanel(callbacks: PrivateLobbyCallbacks): HTMLDivElement {
+    const panel = document.createElement('div');
+    panel.className = 'vi-settings-section vi-hidden';
+
+    const createBtn = document.createElement('button');
+    createBtn.className = 'vi-btn vi-btn--accent';
+    createBtn.textContent = t('play.start');
+    createBtn.addEventListener('click', () => {
+      const profile = localProfileStore.get();
+      callbacks.onCreateRoom({
+        trackId: this.selectedTrackId,
+        vehicleId: profile.selectedVehicleId,
+        colorwayId: profile.selectedColorwayId,
+        laps: this.laps,
+        botCount: this.bots,
+        aiDifficulty: this.difficulty,
+        online: { mode: 'private' },
+      });
+    });
+
+    const joinRow = document.createElement('div');
+    joinRow.className = 'vi-row';
+    const codeInput = document.createElement('input');
+    codeInput.className = 'vi-slider';
+    codeInput.placeholder = 'VX7K92';
+    codeInput.maxLength = 6;
+    codeInput.style.textTransform = 'uppercase';
+    const joinBtn = document.createElement('button');
+    joinBtn.className = 'vi-btn vi-btn--secondary';
+    joinBtn.textContent = '▶';
+    joinBtn.addEventListener('click', () => {
+      const profile = localProfileStore.get();
+      const code = codeInput.value.trim().toUpperCase();
+      if (code.length !== 6) return;
+      callbacks.onJoinRoom(code, { vehicleId: profile.selectedVehicleId, colorwayId: profile.selectedColorwayId });
+    });
+    joinRow.append(codeInput, joinBtn);
+
+    panel.append(createBtn, joinRow);
+    return panel;
   }
 
   private renderTrackGrid(): void {
