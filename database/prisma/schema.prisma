@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  GUEST
+  EMAIL
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String?  @unique
+  passwordHash    String?
+  authProvider    AuthProvider @default(GUEST)
+  refreshTokenHash String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  profile         Profile?
+  settings        PlayerSettings?
+  vehicleUnlocks  VehicleUnlock[]
+  customizations  VehicleCustomization[]
+  raceParticipations RaceParticipant[]
+  stats           PlayerStat?
+  currencyLedger  CurrencyLedgerEntry[]
+  achievements    PlayerAchievement[]
+  missions        PlayerMission[]
+  inventory       InventoryItem[]
+  friendshipsA    Friendship[] @relation("FriendshipUserA")
+  friendshipsB    Friendship[] @relation("FriendshipUserB")
+  matchHistory    MatchHistoryEntry[]
+
+  @@index([email])
+}
+
+model Profile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName     String   @unique
+  level           Int      @default(1)
+  totalXp         Int      @default(0)
+  coins           Int      @default(300)
+  selectedVehicleId String @default("wave")
+  selectedColorwayId String @default("ocean-blue")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PlayerSettings {
+  id                  String  @id @default(uuid())
+  userId              String  @unique
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale              String  @default("ar")
+  graphicsQuality     String  @default("medium")
+  masterVolume        Float   @default(0.8)
+  musicVolume         Float   @default(0.7)
+  sfxVolume           Float   @default(0.85)
+  cameraShakeEnabled  Boolean @default(true)
+  reducedMotion       Boolean @default(false)
+  vibrationEnabled    Boolean @default(true)
+  autoAccelerate      Boolean @default(false)
+  colorBlindMode      String  @default("none")
+  updatedAt           DateTime @updatedAt
+}
+
+/// Static catalog of vehicles — kept in sync with packages/shared/balance/vehicles.json.
+/// Balance NUMBERS live only in that JSON; this table just tracks unlock/ownership state.
+model VehicleCatalogEntry {
+  id        String   @id
+  name      String
+  unlocks   VehicleUnlock[]
+}
+
+model VehicleUnlock {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  vehicle     VehicleCatalogEntry @relation(fields: [vehicleId], references: [id])
+  unlockedAt  DateTime @default(now())
+
+  @@unique([userId, vehicleId])
+}
+
+model VehicleCustomization {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  colorwayId  String
+  wheelId     String   @default("default")
+  spoilerId   String   @default("default")
+  decalId     String?
+  boostTrailId String  @default("default")
+  hornId      String   @default("default")
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, vehicleId])
+}
+
+model Track {
+  id    String @id
+  name  String
+  races Race[]
+}
+
+model Race {
+  id            String   @id @default(uuid())
+  trackId       String
+  track         Track    @relation(fields: [trackId], references: [id])
+  mode          String
+  totalLaps     Int
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  participants  RaceParticipant[]
+}
+
+model RaceParticipant {
+  id              String   @id @default(uuid())
+  raceId          String
+  race            Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  isBot           Boolean  @default(false)
+  displayName     String
+  vehicleId       String
+  position        Int?
+  totalTimeMs     Int?
+  bestLapMs       Int?
+  driftDistanceM  Float    @default(0)
+  powerUpsUsed    Int      @default(0)
+  xpEarned        Int      @default(0)
+  coinsEarned     Int      @default(0)
+  /// Prevents double-crediting rewards if a result submission is retried.
+  idempotencyKey  String   @unique
+
+  @@index([raceId])
+  @@index([userId])
+}
+
+model PlayerStat {
+  id                    String @id @default(uuid())
+  userId                String @unique
+  user                  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  racesCompleted        Int    @default(0)
+  racesWon              Int    @default(0)
+  totalDriftMeters      Float  @default(0)
+  totalKmDriven         Float  @default(0)
+  totalPowerUpsUsed     Int    @default(0)
+  perfectLaps           Int    @default(0)
+  shortcutsTaken        Int    @default(0)
+  lastToFirstFinishes   Int    @default(0)
+  updatedAt             DateTime @updatedAt
+}
+
+model Leaderboard {
+  id          String   @id @default(uuid())
+  scope       String   // "global" | "weekly" | "track"
+  trackId     String?
+  userId      String
+  displayName String
+  value       Int      // best time (ms) for track records, or score for global/weekly
+  recordedAt  DateTime @default(now())
+
+  @@index([scope, trackId, value])
+}
+
+model Friendship {
+  id         String   @id @default(uuid())
+  userAId    String
+  userA      User     @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId    String
+  userB      User     @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  status     String   @default("pending") // pending | accepted
+  createdAt  DateTime @default(now())
+
+  @@unique([userAId, userBId])
+}
+
+model Achievement {
+  id      String @id
+  nameKey String
+  players PlayerAchievement[]
+}
+
+model PlayerAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  progress      Int      @default(0)
+  unlockedAt    DateTime?
+
+  @@unique([userId, achievementId])
+}
+
+model PlayerMission {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionId   String
+  assignedDate String  // YYYY-MM-DD, so missions reroll daily
+  progress    Int      @default(0)
+  completedAt DateTime?
+
+  @@unique([userId, missionId, assignedDate])
+}
+
+model InventoryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemType  String   // "skin" | "decal" | "horn" | ...
+  itemId    String
+  acquiredAt DateTime @default(now())
+
+  @@unique([userId, itemType, itemId])
+}
+
+model CurrencyLedgerEntry {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Int      // positive = credit, negative = debit
+  reason         String   // "race_reward" | "mission_reward" | "purchase" | ...
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+}
+
+model MatchHistoryEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  raceId      String
+  trackId     String
+  position    Int
+  totalTimeMs Int
+  playedAt    DateTime @default(now())
+
+  @@index([userId])
+}
